@@ -14,7 +14,7 @@ using System.Windows.Shapes;
 using System.Collections.ObjectModel;
 using Northwoods.GoXam;
 using Northwoods.GoXam.Model;
-
+ 
 
 using SMining.Core.Data;
 using SMiningClient.WPF;
