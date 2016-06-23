@@ -332,13 +332,46 @@ namespace DummyBuilder
         }
         //cycle 여부 확인하는 함수
         //요거만 짜면 될듯
-        private bool isExistCycle()
+        
+        private bool isExistCycle(List<DataProcess> processList, int[,] adjMatrix)
         {
+            int totalNode = adjMatrix.GetLength(0);
+            bool[] isVisit = new bool[totalNode];
+            bool[] isRecursiveStack = new bool[totalNode];
 
-
+            //방문하지 않은 모든 node에 대해서 DFS 수행, recursive stack에 만날 시 cycle로 인정
+            for (int i = 0; i < totalNode; i++)
+            {
+                if (isVisit[i] == false)
+                    if (cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)//1번이라도 cycle 발생시 바로 종료
+                        return true;
+            }
             return false;
         }
-        
+        //recursive function for DFS for checking cycle,
+        public bool cycleSearch(List<DataProcess> processList, int[,] adjMatrix, int idx,ref bool[] isVisit,ref bool[] isRecursiveStack)
+        {
+            if (isVisit[idx] == false)
+            {
+                isVisit[idx] = true;
+                isRecursiveStack[idx] = true;
+                
+                for (int i = 0; i < adjMatrix.GetLength(0); i++)
+                {
+                    if (adjMatrix[idx, i] == 1)
+                    {
+                        if (isVisit[i] == false && cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack)==true)
+                            return true;
+                        else if (isRecursiveStack[i] == true)//if it meets the recursiveStack, it is cycle, so return true
+                            return true;
+                    }
+                }
+            }
+            //if all jobs from the child are finished, it is deleted from the recursiveStack and return false
+            isRecursiveStack[idx] = false;
+            return false;
+        }
+
 
         //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성, 탐색하는 거는 따로 구현을 다시 해야함
         private void travelProcessTree(List<DataProcess> processList, int[,] adjMatrix)
@@ -348,10 +381,8 @@ namespace DummyBuilder
 
             String res = "";
 
-            bool[] visit = new bool[totalNode];
+            bool[] isVisit = new bool[totalNode];
             List<int> searchList = new List<int>();
-
-            
 
             searchList.Add(0);
 
@@ -360,23 +391,20 @@ namespace DummyBuilder
             while (searchList.Count != 0)
             {
                 currIdx = searchList[0];
+                isVisit[currIdx] = true;
 
                 if (currIdx > 1)
                     res = res + processList[currIdx-2] + " ";
 
-
                 for (int i = 0; i < totalNode; i++)
                 {
-                    if (adjMatrix[currIdx, i] == 1)
+                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
                         searchList.Insert(1, i);
                 }
 
                 searchList.RemoveAt(0);
             }
-
             MessageBox.Show(res);
-
-
         }
 
         private void buildProcessTree(List<Node> nodeList)
@@ -391,7 +419,7 @@ namespace DummyBuilder
             String res = "";
 
             adjMatrix = new int[nodeList.Count, nodeList.Count];
-            bool[] visit = new bool[nodeList.Count];
+            bool[] isVisit = new bool[nodeList.Count];
 
             
             List<int> searchList = new List<int>();
@@ -419,7 +447,7 @@ namespace DummyBuilder
 
                 res = res + currNodeTemplate.Name + " ";
 
-                visit[currNodeTemplate._idx] = true;
+                isVisit[currNodeTemplate._idx] = true;
 
                 if (currNodeTemplate.Name == "End")
                     loopContinuous = true;
@@ -431,11 +459,11 @@ namespace DummyBuilder
                 {
                     Node nextNode = k.ToNode;
                     MyNodeData nextNodeTemplate = nextNode.Data as MyNodeData;
+                    adjMatrix[currNodeTemplate._idx, nextNodeTemplate._idx] = 1;
 
-                    if (visit[nextNodeTemplate._idx] == false)
+                    if (isVisit[nextNodeTemplate._idx] == false)
                     {
                         searchList.Insert(1, nextNodeTemplate._idx);
-                        adjMatrix[currNodeTemplate._idx, nextNodeTemplate._idx] = 1;
                     }
                 }
 
@@ -448,65 +476,15 @@ namespace DummyBuilder
             }
             else
             {
-                MessageBox.Show(res);
+                //travelProcessTree(finalProcList, adjMatrix);
+                bool isCycle = isExistCycle(finalProcList, adjMatrix);
+
+                if (isCycle == true)
+                    MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요");
+                else
+                    MessageBox.Show(res);
             }
 
-            travelProcessTree(finalProcList, adjMatrix);
-            
-
-
-            /*
-      
-                while (endLoop == false)
-                {
-                    List<Link> linkOut = (currNode.LinksOutOf).ToList<Link>();
-                    int cnt = 0;
-                    foreach (Link k in linkOut)
-                    {
-                        Node nextNode = k.ToNode;
-
-                        if (nextNode == null)
-                        {
-                            cnt++;
-                        }
-
-                        if ((nextNode.Data as MyNodeData).Name == "End")
-                        {
-                            success = true;
-                            endLoop = true;
-                        }
-                        else if ((nextNode.Data as MyNodeData).isInit == true)
-                        {
-                            noInit = true;
-                            endLoop = true;
-                        }
-                        else
-                        {
-                            DataProcess dp = (nextNode.Data as MyNodeData)._dataProcess;
-
-                            if (dp != null)
-                            {
-                                finalProcList.Add(dp);
-
-                                Node next = findNodeWithStr((nextNode.Data as MyNodeData).Key, nodeList);
-                                if (next != null)
-                                    currNode = next;
-                            }
-                        }
-                    }
-
-                    if (cnt == linkOut.Count)
-                    {                        
-                        endLoop = true;
-                    }
-                }
-             * */
-        }
-
-        //주어진 process list를 순서대로 수행하는 함수(BFS 방식으로 수행될듯)
-        private void searchDataProcessList()
-        {
-            
         }
 
 
