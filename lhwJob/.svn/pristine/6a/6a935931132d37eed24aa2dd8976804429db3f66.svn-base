@@ -61,7 +61,15 @@ namespace DummyBuilder
             model.HasUndoManager = true;
 
             myDiagram.Model = model;
+            myDiagram.AllowDrop = true;
 
+
+
+            /*
+             * <go:Diagram.Layout>
+                <go:GridLayout CellSize="5 5" WrappingColumn="1" Sorting="Forward" />
+            </go:Diagram.Layout>
+             * */
 
             int idx = 0;
 
@@ -72,7 +80,6 @@ namespace DummyBuilder
             {
                 TreeViewItem item = new TreeViewItem();
                 item.Header = processParent.nameOfCategory;
-                item.AllowDrop = true;
 
                 Palette p = new Palette();
                 p.Model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
@@ -108,20 +115,7 @@ namespace DummyBuilder
 
                 p.Model.NodesSource = initNodeData;
 
-                //item.Items.Add(p);
-                foreach (DataProcess dataProcess in processParent.procList)
-                {
-                    
-                    
-
-                    MyNodeTVVersion nodeItem = new MyNodeTVVersion(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName = processParent.nameOfCategory, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
-                    nodeItem.AllowDrop = true;
-                    nodeItem.Header = nodeItem.myData.Name;
-
-                    
-                    item.Items.Add(nodeItem);
-                }
-                
+                item.Items.Add(p);
 
                 treeView.Items.Add(item);
                 
@@ -132,11 +126,12 @@ namespace DummyBuilder
             //myPalette2.Model.NodesSource = initNodeData;
         }
 
+        //adding item to children in stackpanel...
+
         
         //processor 아이콘 누를 경우의 이벤트로서 누르면 description하고 parameter 입력하는 창 갱신해야함
         private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-
             MyNodeData node = Part.FindAncestor<Node>(sender as UIElement).Data as MyNodeData;
             
             Node n = Part.FindAncestor<Node>(sender as UIElement);
@@ -152,8 +147,6 @@ namespace DummyBuilder
                 OnParameterInput(node);
             }
         }
-
-        
 
         private void OnParameterInput(MyNodeData node)
         {
@@ -412,8 +405,6 @@ namespace DummyBuilder
                 searchList.RemoveAt(0);
             }
             MessageBox.Show(res);
-            
-
         }
 
         private void buildProcessTree(List<Node> nodeList)
@@ -501,48 +492,7 @@ namespace DummyBuilder
         {
             finalProcList.Clear();
         }
-
-
-        private void treeView_PreviewMouseLeftButtonDown_1(object sender, MouseButtonEventArgs e)
-        {
-            DependencyObject uie = treeView.InputHitTest(e.GetPosition(treeView)) as DependencyObject;
-
-            if (uie is TextBlock)
-            {
-                TreeViewItem tvi = e.Source as TreeViewItem;
-
-                if (tvi == null)
-                {
-                    MyNodeTVVersion nodeTV = e.Source as MyNodeTVVersion;
-
-                    DragDrop.DoDragDrop(treeView, nodeTV, DragDropEffects.Move);
-                    e.Handled = true;
-                }
-            }
-        }
-
-        private void myDiagram_Drop_1(object sender, DragEventArgs e)
-        {
-            MyNodeTVVersion nodeTV = e.Data.GetData(typeof(MyNodeTVVersion)) as MyNodeTVVersion;
-            nodeTV.myData.Location = e.GetPosition(myDiagram);
-
-            myDiagram.Model.AddNode(nodeTV.myData.Clone());
-
-
-        }
     }
-
-    [Serializable]
-    public class MyNodeTVVersion : TreeViewItem
-    {
-        public MyNodeData myData;
-
-        public MyNodeTVVersion(MyNodeData _myData)
-        {
-            myData = _myData;
-        }
-    }
-
 
 
     [Serializable]  // serializable in WPF to support the clipboard

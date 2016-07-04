@@ -173,6 +173,7 @@
                       StrokeThickness="6" />
                 <go:LinkShape x:Name="Path" Stroke="Black" StrokeThickness="1" />
                 <Path Fill="Black" go:LinkPanel.ToArrow="Standard" />
+
                 <ContextMenuService.ContextMenu>
                     <ContextMenu>
                         <MenuItem Command="Copy" />
@@ -187,15 +188,19 @@
         </DataTemplate>
     </FrameworkElement.Resources>
 
-    <Grid Background="{DynamicResource WindowBackgroundBrush}" Name="ProcessCandidate">
-        <TreeView Name="treeView" AllowDrop="True" PreviewMouseLeftButtonDown="treeView_PreviewMouseLeftButtonDown_1">
-        </TreeView>
+    <Grid Background="{DynamicResource WindowBackgroundBrush}">
+        <go:Palette x:Name="myPalette"
+                NodeTemplate="{StaticResource MyNodeTemplate}" Margin="10,10,0,0" BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1" Width="267" Height="303" HorizontalAlignment="Left" VerticalAlignment="Top" Background="White">
+            <go:Diagram.Layout>
+                <go:GridLayout CellSize="5 5" WrappingColumn="1" Sorting="Forward" />
+            </go:Diagram.Layout>
+        </go:Palette>
+
         <go:Diagram x:Name="myDiagram"
-                    AllowDrop="True"
-                    Drop="myDiagram_Drop_1"
                 Padding="10" BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1"
                 HorizontalContentAlignment="Stretch"
                 VerticalContentAlignment="Stretch"
+                DragSelectingTool="{x:Null}"
                 NodeTemplate="{StaticResource MyNodeTemplate}"
                 LinkTemplate="{StaticResource MyLinkTemplate}" Margin="288,10,204,10" RenderTransformOrigin="0.5,0.5" Background="White">
             <go:Diagram.RenderTransform>
@@ -213,7 +218,7 @@
             </Border>
         </Grid>
 
-        <Label FontWeight="Bold"  FontSize="15" Name="ProcessParameter" Content="Process Options" Height="29" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,28,0" Width="127"></Label>
+        <Label FontWeight="Bold"  FontSize="15" Name="ProcessParameter" Content="Process Options" Height="29" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="861,10,56,0"></Label>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="598,44,10,71" HorizontalAlignment="Right">
             <StackPanel Name="panelLayout" Orientation="Vertical" Width="155" Margin="0,5,10,5">
             </StackPanel>

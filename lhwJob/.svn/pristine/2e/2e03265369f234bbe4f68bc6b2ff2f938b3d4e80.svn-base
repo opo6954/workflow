@@ -50,7 +50,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Northwoods.GoWPF">
-      <HintPath>G:\Workspaces\lib\C#\GoWPF222\bin\Northwoods.GoWPF.dll</HintPath>
+      <HintPath>goXamdll\Northwoods.GoWPF.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -82,14 +82,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Core\DataProcess.cs" />
-    <Compile Include="Core\DataProcessChain.cs" />
     <Compile Include="Core\DataProcessEvent.cs" />
     <Compile Include="Core\DataProperty.cs" />
-    <Compile Include="Core\DataReader.cs" />
     <Compile Include="Core\DataRecord.cs" />
     <Compile Include="Core\GeneralOptionSupport.cs" />
-    <Compile Include="Core\StreamDataProcess.cs" />
-    <Compile Include="Core\StreamReader.cs" />
     <Compile Include="Form\ProcessForm.cs">
       <SubType>Form</SubType>
     </Compile>

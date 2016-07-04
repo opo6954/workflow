@@ -14,7 +14,7 @@ using System.Windows.Shapes;
 using System.Collections.ObjectModel;
 using Northwoods.GoXam;
 using Northwoods.GoXam.Model;
- 
+
 
 using SMining.Core.Data;
 using SMiningClient.WPF;
@@ -30,20 +30,17 @@ namespace DummyBuilder
 
     public partial class ProcessFlowChart : Window
     {
-        public List<DummyProcessParent> allProcList;
+        public List<DataProcess> allProcList;
         public List<DataProcess> finalProcList;
-        int[,] adjMatrix;
         public MyNodeData start;
         public MyNodeData end;
 
         
         
 
-        public ProcessFlowChart(List<DummyProcessParent> procList)
+        public ProcessFlowChart(List<DataProcess> procList)
         {
             InitializeComponent();
-
-
 
             allProcList = procList;
             finalProcList = new List<DataProcess>();
@@ -61,82 +58,30 @@ namespace DummyBuilder
             model.HasUndoManager = true;
 
             myDiagram.Model = model;
+            myDiagram.AllowDrop = true;            
+            
 
+            myPalette.Model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
+
+            List<MyNodeData> initNodeData = new List<MyNodeData>();
 
             int idx = 0;
 
-
-            //treeview 형식으로 process 집어넣기
-            //treeview 형식은 일단 parent가 존재하고 그 parent에 data process list가 있고 이름이 있음
-            foreach(DummyProcessParent processParent in allProcList)
+            foreach(DataProcess dataProcess in allProcList)
             {
-                TreeViewItem item = new TreeViewItem();
-                item.Header = processParent.nameOfCategory;
-                item.AllowDrop = true;
-
-                Palette p = new Palette();
-                p.Model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
-                p.NodeTemplate = (DataTemplate)FindResource("MyNodeTemplate");
-                p.BorderBrush = Brushes.Azure;
-                p.BorderThickness = new Thickness(1);
-                p.Width = 267;
-                p.Height = 303;
-                p.HorizontalAlignment = HorizontalAlignment.Left;
-                p.VerticalAlignment = VerticalAlignment.Top;
-                p.Background = Brushes.White;
-
-                p.GridSnapCellSize = new Size(5,5);
-
-                Northwoods.GoXam.Layout.GridLayout g = new Northwoods.GoXam.Layout.GridLayout();
-
-                g.CellSize = new Size(5, 5);
-                g.WrappingColumn = 1;
-                g.Sorting = Northwoods.GoXam.Layout.GridSorting.Forward;
-
-                p.Layout = g;
-
-                
-                //WrappingColumn="1" Sorting="Forward"
-                List<MyNodeData> initNodeData = new List<MyNodeData>();
-                
-                foreach (DataProcess dataProcess in processParent.procList)
-                {
-                    initNodeData.Add(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName=processParent.nameOfCategory, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
-                }
-
-                
-
-                p.Model.NodesSource = initNodeData;
-
-                //item.Items.Add(p);
-                foreach (DataProcess dataProcess in processParent.procList)
-                {
-                    
-                    
-
-                    MyNodeTVVersion nodeItem = new MyNodeTVVersion(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName = processParent.nameOfCategory, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
-                    nodeItem.AllowDrop = true;
-                    nodeItem.Header = nodeItem.myData.Name;
-
-                    
-                    item.Items.Add(nodeItem);
-                }
-                
-
-                treeView.Items.Add(item);
-                
+                initNodeData.Add(new MyNodeData(){Key=idx.ToString(), FuncBinding =(DataProcess)dataProcess.Clone(), Name=dataProcess.Name, Color="Lavender", inputNum=1, outputNum=1, Deletable=true});
+                idx++;
             }
 
-
-
-            //myPalette2.Model.NodesSource = initNodeData;
+            myPalette.Model.NodesSource = initNodeData;
         }
+
+        //adding item to children in stackpanel...
 
         
         //processor 아이콘 누를 경우의 이벤트로서 누르면 description하고 parameter 입력하는 창 갱신해야함
         private void Icon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-
             MyNodeData node = Part.FindAncestor<Node>(sender as UIElement).Data as MyNodeData;
             
             Node n = Part.FindAncestor<Node>(sender as UIElement);
@@ -153,25 +98,17 @@ namespace DummyBuilder
             }
         }
 
-        
-
         private void OnParameterInput(MyNodeData node)
         {
             if (node.isInit == true)
             {
                 for (int i = 0; i < allProcList.Count; i++)
                 {
-                    if (allProcList[i].nameOfCategory == node.ParentName)
+                    if (allProcList[i].Name == node.FuncBinding.Name)
                     {
-                        for (int j = 0; j < allProcList[i].procList.Count; j++)
-                        {
-                            if (allProcList[i].procList[j].Name == node.FuncBinding.Name)
-                            {
-                                node.FuncBinding = (DataProcess)allProcList[i].procList[j].Clone();
-                                node.isInit = false;
-                                break;
-                            }
-                        }
+                        node.FuncBinding = (DataProcess)allProcList[i].Clone();
+                        node.isInit = false;
+                        break;
                     }
                 }
             }
@@ -284,6 +221,18 @@ namespace DummyBuilder
 
                     else
                     {
+                        /*
+                         * box.Text = op.Value.ToString();
+                        Thickness t = l.Margin;
+                        t.Left = t.Left+20;
+                        t.Top = t.Top + 5;
+                        box.Width = 70;
+                        box.Height = 20;
+                        box.Margin = t;
+                        box.IsReadOnly = true;
+                        box.VerticalAlignment = VerticalAlignment.Top;
+                        */
+
                         TextBox box = new TextBox();
                         box.Text = op.Value.ToString();
                         box.Margin = bottomMargin;
@@ -304,7 +253,51 @@ namespace DummyBuilder
 
 
         }
-   
+        /*
+         * rid test = new Grid();
+test.ColumnDefinitions.Add(new ColumnDefinition());
+test.ColumnDefinitions.Add(new ColumnDefinition());
+test.RowDefinitions.Add(new RowDefinition());
+test.RowDefinitions.Add(new RowDefinition());
+test.RowDefinitions.Add(new RowDefinition());
+
+Label t1 = new Label();
+t1.Content = "Test1";
+Label t2 = new Label();
+t2.Content = "Test2";
+Label t3 = new Label();
+t3.Content = "Test3";
+Label t4 = new Label();
+t4.Content = "Test4";
+Label t5 = new Label();
+t5.Content = "Test5";
+Label t6 = new Label();
+t6.Content = "Test6";
+
+Grid.SetColumn(t1, 0);
+Grid.SetRow(t1, 0);
+test.Children.Add(t1);
+
+Grid.SetColumn(t2, 1);
+Grid.SetRow(t2, 0);
+test.Children.Add(t2);
+
+Grid.SetColumn(t3, 0);
+Grid.SetRow(t3, 1);
+test.Children.Add(t3);
+         */
+
+
+        private DataProcess findDataProcessWithStr(String name)
+        {
+            foreach(DataProcess dp in allProcList)
+            {
+                if (dp.Name == name)
+                    return dp;
+            }
+            return null;
+        }
+
         private Node findNodeWithStr(String name, List<Node> list)
         {
             foreach (Node n in list)
@@ -321,9 +314,6 @@ namespace DummyBuilder
         private void button_OK_Click_1(object sender, RoutedEventArgs e)
         {
             finalProcList.Clear();
-            
-
-            
 
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
@@ -333,234 +323,95 @@ namespace DummyBuilder
             else if ((nodeList[1].LinksInto).ToList<Link>().Capacity == 0)
                 MessageBox.Show("종료점이 연결되지 않았습니다.");
             else
-                buildProcessTree(nodeList);
-
-
-        }
-        //cycle 여부 확인하는 함수
-        //요거만 짜면 될듯
-        
-        private bool isExistCycle(List<DataProcess> processList, int[,] adjMatrix)
-        {
-            int totalNode = adjMatrix.GetLength(0);
-            bool[] isVisit = new bool[totalNode];
-            bool[] isRecursiveStack = new bool[totalNode];
-
-            //방문하지 않은 모든 node에 대해서 DFS 수행, recursive stack에 만날 시 cycle로 인정
-            for (int i = 0; i < totalNode; i++)
             {
-                if (isVisit[i] == false)
-                    if (cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)//1번이라도 cycle 발생시 바로 종료
-                        return true;
-            }
-            return false;
-        }
-        //recursive function for DFS for checking cycle,
-        public bool cycleSearch(List<DataProcess> processList, int[,] adjMatrix, int idx,ref bool[] isVisit,ref bool[] isRecursiveStack)
-        {
-            if (isVisit[idx] == false)
-            {
-                isVisit[idx] = true;
-                isRecursiveStack[idx] = true;
-                
-                for (int i = 0; i < adjMatrix.GetLength(0); i++)
+                DataProcess dp1 = (nodeList[2].Data as MyNodeData).FuncBinding;
+                DataProcess dp2 = (nodeList[3].Data as MyNodeData).FuncBinding;
+                DataProcess dp3 = (DataProcess)dp1.Clone();
+                dp1.Description = "powerover";
+
+                bool endLoop = false;
+                bool success = false;
+                bool noInit = false;
+
+                while (endLoop == false)
                 {
-                    if (adjMatrix[idx, i] == 1)
+                    List<Link> linkOut = (currNode.LinksOutOf).ToList<Link>();
+                    int cnt = 0;
+                    foreach (Link k in linkOut)
                     {
-                        if (isVisit[i] == false && cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack)==true)
-                            return true;
-                        else if (isRecursiveStack[i] == true)//if it meets the recursiveStack, it is cycle, so return true
-                            return true;
+                        Node nextNode = k.ToNode;
+
+                        if (nextNode == null)
+                        {
+                            cnt++;
+                        }
+
+                        if ((nextNode.Data as MyNodeData).Name == "End")
+                        {
+                            success = true;
+                            endLoop = true;
+                        }
+                        else if ((nextNode.Data as MyNodeData).isInit == true)
+                        {
+                            noInit = true;
+                            endLoop = true;
+                        }
+                        else
+                        {
+                            DataProcess dp = (nextNode.Data as MyNodeData)._dataProcess;
+
+                            if (dp != null)
+                            {
+                                finalProcList.Add(dp);
+
+                                Node next = findNodeWithStr((nextNode.Data as MyNodeData).Key, nodeList);
+                                if (next != null)
+                                    currNode = next;
+                            }
+                        }
                     }
-                }
-            }
-            //if all jobs from the child are finished, it is deleted from the recursiveStack and return false
-            isRecursiveStack[idx] = false;
-            return false;
-        }
 
-
-        //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성, 탐색하는 거는 따로 구현을 다시 해야함
-        private void travelProcessTree(List<DataProcess> processList, int[,] adjMatrix)
-        {
-            int totalNode = adjMatrix.GetLength(0);//without start, end node
-            int numProcess = totalNode-2;//including start, end node
-
-            String res = "";
-
-            bool[] isVisit = new bool[totalNode];
-            List<int> searchList = new List<int>();
-
-            searchList.Add(0);
-
-            int currIdx;
-
-            while (searchList.Count != 0)
-            {
-                currIdx = searchList[0];
-                isVisit[currIdx] = true;
-
-                if (currIdx > 1)
-                    res = res + processList[currIdx-2] + " ";
-
-                for (int i = 0; i < totalNode; i++)
-                {
-                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
-                        searchList.Insert(1, i);
-                }
-
-                searchList.RemoveAt(0);
-            }
-            MessageBox.Show(res);
-            
-
-        }
-
-        private void buildProcessTree(List<Node> nodeList)
-        {
-            bool endLoop = false;
-            bool success = false;
-            bool noInit = false;
-            bool loopContinuous = false;
-
-            Node currNode;
-
-            String res = "";
-
-            adjMatrix = new int[nodeList.Count, nodeList.Count];
-            bool[] isVisit = new bool[nodeList.Count];
-
-            
-            List<int> searchList = new List<int>();
-            
-            
-
-            searchList.Add(0);
-
-            
-
-            //연결된 모든 process를 한 list에 몽땅 집어넣자
-            for (int i = 0; i < nodeList.Count; i++)
-            {
-                if(i>1)//except start and end node
-                    finalProcList.Add((nodeList[i].Data as MyNodeData).FuncBinding);
-                (nodeList[i].Data as MyNodeData)._idx = i;//finalProcList에 들어간 idx를 말함
-
-            }
-
-            while (searchList.Count != 0)
-            {
-                //현재 node의 나가는 link를 list로 저장
-                currNode = nodeList[searchList[0]];
-                MyNodeData currNodeTemplate = currNode.Data as MyNodeData;
-
-                res = res + currNodeTemplate.Name + " ";
-
-                isVisit[currNodeTemplate._idx] = true;
-
-                if (currNodeTemplate.Name == "End")
-                    loopContinuous = true;
-                
-                List<Link> linkOut = (currNode.LinksOutOf).ToList<Link>();
-
-                //현재 나가는 link에 대해서 확인
-                foreach (Link k in linkOut)
-                {
-                    Node nextNode = k.ToNode;
-                    MyNodeData nextNodeTemplate = nextNode.Data as MyNodeData;
-                    adjMatrix[currNodeTemplate._idx, nextNodeTemplate._idx] = 1;
-
-                    if (isVisit[nextNodeTemplate._idx] == false)
-                    {
-                        searchList.Insert(1, nextNodeTemplate._idx);
+                    if (cnt == linkOut.Count)
+                    {                        
+                        endLoop = true;
                     }
                 }
 
-                searchList.RemoveAt(0);//처음 index 제거
-            }
-
-            if (loopContinuous == false)
-            {
-                MessageBox.Show("시작에서 끝점까지 연결이 되어있지 않습니다.");
-            }
-            else
-            {
-                //travelProcessTree(finalProcList, adjMatrix);
-                bool isCycle = isExistCycle(finalProcList, adjMatrix);
-
-                if (isCycle == true)
-                    MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요");
+                if (success == true)
+                {
+                    String s="Process: ";
+                    for (int i = 0; i < finalProcList.Count; i++)
+                    {
+                        s = s + finalProcList[i].Name + ' ';
+                    }
+                    MessageBox.Show(s);
+                }
+                else if (noInit == true)
+                    MessageBox.Show("몇 몇 Process의 변수가 설정되지 않았습니다.");
                 else
-                    MessageBox.Show(res);
+                    MessageBox.Show("중간에 끊긴 부분이 있습니다.");
             }
-
         }
-
 
         private void button_Cancel_Click_1(object sender, RoutedEventArgs e)
         {
             finalProcList.Clear();
         }
-
-
-        private void treeView_PreviewMouseLeftButtonDown_1(object sender, MouseButtonEventArgs e)
-        {
-            DependencyObject uie = treeView.InputHitTest(e.GetPosition(treeView)) as DependencyObject;
-
-            if (uie is TextBlock)
-            {
-                TreeViewItem tvi = e.Source as TreeViewItem;
-
-                if (tvi == null)
-                {
-                    MyNodeTVVersion nodeTV = e.Source as MyNodeTVVersion;
-
-                    DragDrop.DoDragDrop(treeView, nodeTV, DragDropEffects.Move);
-                    e.Handled = true;
-                }
-            }
-        }
-
-        private void myDiagram_Drop_1(object sender, DragEventArgs e)
-        {
-            MyNodeTVVersion nodeTV = e.Data.GetData(typeof(MyNodeTVVersion)) as MyNodeTVVersion;
-            nodeTV.myData.Location = e.GetPosition(myDiagram);
-
-            myDiagram.Model.AddNode(nodeTV.myData.Clone());
-
-
-        }
     }
-
-    [Serializable]
-    public class MyNodeTVVersion : TreeViewItem
-    {
-        public MyNodeData myData;
-
-        public MyNodeTVVersion(MyNodeData _myData)
-        {
-            myData = _myData;
-        }
-    }
-
 
 
     [Serializable]  // serializable in WPF to support the clipboard
     public class MyNodeData : GraphLinksModelNodeData<String>
     {
         public string _name;
-        public string _parentName;
         public int _inputNum;
         public int _outputNum;
         public bool _Deletable;
         public bool[] _availableInput = new bool[3]{false,false,false};
         public bool[] _availableOutput = new bool[3]{false,false,false};
         public bool isInit = true;
-        public int _idx;
-        
 
         public DataProcess _dataProcess;
-
 
         public DataProcess FuncBinding
         {
@@ -570,16 +421,7 @@ namespace DummyBuilder
                 _dataProcess = (DataProcess)value.Clone();
             }
         }
-
-        public String ParentName
-        {
-            get { return _parentName; }
-            set
-            {
-                _parentName = value;
-            }
-
-        }
+    
 
         public String Name
         {

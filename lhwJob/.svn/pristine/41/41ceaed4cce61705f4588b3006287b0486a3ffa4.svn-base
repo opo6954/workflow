@@ -1,0 +1,52 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+
+using SMining.Core.Data;
+using SMiningClient.WPF;
+using DummyBuilder.Process;
+
+namespace DummyBuilder
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        List<DataProcess> procList = new List<DataProcess>();
+        //function process is defined
+        
+        public MainWindow()
+        {
+            InitializeComponent();
+            procList.Add(new DummyProcess1());
+            procList.Add(new DummyProcess2());
+            procList.Add(new DummyProcess3());
+        }
+
+        private void OnBuilderOpen(object sender, RoutedEventArgs e)
+        {
+            /*
+            ProcessForm procForm = new ProcessForm(procList);
+            procForm.Show();
+             */
+
+            
+            ProcessFlowChart procFlow = new ProcessFlowChart(procList);
+            procFlow.Show();
+            
+
+        }
+    }
+}

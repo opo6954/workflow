@@ -173,6 +173,7 @@
                       StrokeThickness="6" />
                 <go:LinkShape x:Name="Path" Stroke="Black" StrokeThickness="1" />
                 <Path Fill="Black" go:LinkPanel.ToArrow="Standard" />
+
                 <ContextMenuService.ContextMenu>
                     <ContextMenu>
                         <MenuItem Command="Copy" />
@@ -188,14 +189,13 @@
     </FrameworkElement.Resources>
 
     <Grid Background="{DynamicResource WindowBackgroundBrush}" Name="ProcessCandidate">
-        <TreeView Name="treeView" AllowDrop="True" PreviewMouseLeftButtonDown="treeView_PreviewMouseLeftButtonDown_1">
+        <TreeView Name="treeView">
         </TreeView>
         <go:Diagram x:Name="myDiagram"
-                    AllowDrop="True"
-                    Drop="myDiagram_Drop_1"
                 Padding="10" BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1"
                 HorizontalContentAlignment="Stretch"
                 VerticalContentAlignment="Stretch"
+                DragSelectingTool="{x:Null}"
                 NodeTemplate="{StaticResource MyNodeTemplate}"
                 LinkTemplate="{StaticResource MyLinkTemplate}" Margin="288,10,204,10" RenderTransformOrigin="0.5,0.5" Background="White">
             <go:Diagram.RenderTransform>

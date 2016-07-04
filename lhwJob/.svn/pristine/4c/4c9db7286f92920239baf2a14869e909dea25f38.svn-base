@@ -1,0 +1,227 @@
+﻿<Window x:Class="DummyBuilder.ProcessFlowChart"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:go="http://schemas.nwoods.com/GoXam"
+        Title="ProcessFlowChart" Height="800" Width="800">
+    <FrameworkElement.Resources>
+        <go:BooleanBrushConverter x:Key="theSelectionConverter"
+                              FalseBrush="Transparent" TrueBrush="{x:Static SystemColors.HighlightBrush}" />
+        <go:BooleanStringConverter x:Key="theButtonConverter" TrueString="-" FalseString="+" />
+        <BooleanToVisibilityConverter x:Key="theVisibleConverter" />
+
+        <DataTemplate x:Key="MyNodeTemplate">
+            <StackPanel go:Node.LocationElementName="icon"
+                  go:Node.Location="{Binding Path=Data.Location, Mode=TwoWay}"
+                  go:Node.LocationSpot="Center" go:Part.Deletable= "{Binding Path=Data.Deletable}">
+                
+                <TextBlock Text="{Binding Path= Data.Name}"
+                   HorizontalAlignment="Center"/>
+                
+                <Grid HorizontalAlignment="Center">
+
+                    <TextBlock Text="in1" Margin="0 0 80 0" FontSize="10" Visibility="{Binding Path=Data.AvailableInput[0], Converter={StaticResource theVisibleConverter}}" />
+                    <TextBlock Text="in2" Margin="0 11 80 0" FontSize="10" Visibility="{Binding Path=Data.AvailableInput[1], Converter={StaticResource theVisibleConverter}}" />
+                    <TextBlock Text="in3" Margin="0 22 80 0" FontSize="10" Visibility="{Binding Path=Data.AvailableInput[2], Converter={StaticResource theVisibleConverter}}" />
+
+                    <TextBlock Text="out1" Margin="90 0 0 0" FontSize="10" Visibility="{Binding Path=Data.AvailableOutput[0], Converter={StaticResource theVisibleConverter}}"/>
+                    <TextBlock Text="out2" Margin="90 11 0 0" FontSize="10" Visibility="{Binding Path=Data.AvailableOutput[1], Converter={StaticResource theVisibleConverter}}" />
+                    <TextBlock Text="out3" Margin="90 22 0 0" FontSize="10" Visibility="{Binding Path=Data.AvailableOutput[2], Converter={StaticResource theVisibleConverter}}" />
+                    
+                    <!-- This shows as the highlight when selected. -->
+                    <Rectangle Fill="{x:Null}"
+                   Stroke="{Binding Path=Part.IsSelected, Converter={StaticResource theSelectionConverter}}"
+                   StrokeThickness="6"
+                   Width="37" Height="37" />
+                    <!-- Actual shape of -->
+                    <Rectangle x:Name="Icon"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="30" Height="30"
+                   Cursor="Hand">
+                    </Rectangle>
+                    <Rectangle x:Name="Input1"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="in1"
+                   go:Node.LinkableFrom="False" go:Node.LinkableTo="True"
+                   Margin="0 0 50 25"
+                   go:Node.ToSpot="MiddleLeft"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableInput[0], Converter={StaticResource theVisibleConverter}}">
+                    </Rectangle>
+                    <Rectangle x:Name="Input2"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="in2"
+                   go:Node.LinkableFrom="False" go:Node.LinkableTo="True"
+                   Margin="0 0 50 0"
+                   go:Node.ToSpot="MiddleLeft"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableInput[1], Converter={StaticResource theVisibleConverter}}">
+                    </Rectangle>
+                    <Rectangle x:Name="Input3"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="in3"
+                   go:Node.LinkableFrom="False" go:Node.LinkableTo="True"
+                   Margin="0 25 50 0"
+                   go:Node.ToSpot="MiddleLeft"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableInput[2], Converter={StaticResource theVisibleConverter}}">
+                    </Rectangle>
+                    <Rectangle x:Name="Output1"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="out1"
+                   go:Node.LinkableFrom="True" go:Node.LinkableTo="False"
+                   Margin="50 0 0 25"
+                   go:Node.ToSpot="MiddleRight"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableOutput[0], Converter={StaticResource theVisibleConverter}}"></Rectangle>
+                    <Rectangle x:Name="Output2"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="out2"
+                   go:Node.LinkableFrom="True" go:Node.LinkableTo="False"
+                   Margin="50 0 0 0"
+                   go:Node.ToSpot="MiddleRight"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableOutput[1], Converter={StaticResource theVisibleConverter}}"></Rectangle>
+                    <Rectangle x:Name="Output3"
+                   Fill="{Binding Path=Data.Color}"
+                   Stroke="Gray" StrokeThickness="1"
+                   Width="10" Height="10"
+                   go:Node.PortId="out3"
+                   go:Node.LinkableFrom="True" go:Node.LinkableTo="False"
+                   Margin="50 25 0 0"
+                   go:Node.ToSpot="MiddleRight"
+                   Cursor="Hand" Visibility="{Binding Path=Data.AvailableOutput[2], Converter={StaticResource theVisibleConverter}}"></Rectangle>
+                    
+                    
+                    <!-- Hide the center of the circle so it does not respond to link drawing gestures. -->
+                    <Rectangle 
+                   Width="20" Height="20" 
+                   Fill="{Binding Path=Data.Color}"
+                   go:Node.PortId="{x:Null}" MouseLeftButtonUp="Icon_MouseLeftButtonUp" />
+                </Grid>
+                <ContextMenuService.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="Copy" />
+                        <MenuItem Command="Cut" />
+                        <MenuItem Command="Paste" />
+                        <MenuItem Command="Delete" />
+                        <MenuItem Command="Undo" />
+                        <MenuItem Command="Redo" />
+                    </ContextMenu>
+                </ContextMenuService.ContextMenu>
+            </StackPanel>
+        </DataTemplate>
+
+        
+        
+        <DataTemplate x:Key="MyLinkTemplate">
+            <go:LinkPanel>
+                <go:Link.Route>
+                    <!-- Make the relink handles bigger, to make them easier to grab. -->
+                    <go:Route RelinkableFrom="True" RelinkableTo="True" Curve="Bezier">
+                        <!-- Link FROM-->
+                        <go:Route.RelinkFromAdornmentTemplate>
+                            <DataTemplate>
+                                <go:LinkPanel>
+                                    <go:ToolHandle go:LinkPanel.Index="0" go:NodePanel.Figure="Diamond" Width="12" Height="12" Fill="Cyan" Stroke="Black" StrokeThickness="1" Cursor="Hand" />
+                                </go:LinkPanel>
+                            </DataTemplate>
+                        </go:Route.RelinkFromAdornmentTemplate>
+                        
+                        <!--Link TO-->
+                        
+                        <go:Route.RelinkToAdornmentTemplate>                            
+                            <DataTemplate>
+                                <go:LinkPanel>
+                                    <go:ToolHandle go:LinkPanel.Index="-1" go:NodePanel.Figure="Diamond" Width="12" Height="12" Fill="Cyan" Stroke="Black" StrokeThickness="1" Cursor="Hand" />
+                                </go:LinkPanel>
+                            </DataTemplate>
+                        </go:Route.RelinkToAdornmentTemplate>
+                    </go:Route>
+                </go:Link.Route>
+                <!-- This thick LinkShape acts as the highlight when selected.
+             Also, when not selected the thickness makes it easier to select the Link. -->
+                <go:LinkShape Stroke="{Binding Path=Part.IsSelected, Converter={StaticResource theSelectionConverter}}"
+                      StrokeThickness="6" />
+                <go:LinkShape x:Name="Path" Stroke="Black" StrokeThickness="1" />
+                <Path Fill="Black" go:LinkPanel.ToArrow="Standard" />
+
+                <ContextMenuService.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Command="Copy" />
+                        <MenuItem Command="Cut" />
+                        <MenuItem Command="Paste" />
+                        <MenuItem Command="Delete" />
+                        <MenuItem Command="Undo" />
+                        <MenuItem Command="Redo" />
+                    </ContextMenu>
+                </ContextMenuService.ContextMenu>
+            </go:LinkPanel>
+        </DataTemplate>
+    </FrameworkElement.Resources>
+
+    
+    
+    
+    
+    
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="2*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0" ShowGridLines="True">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid ShowGridLines="True" Grid.Row="0">
+        <go:Palette x:Name="myPalette"
+                NodeTemplate="{StaticResource MyNodeTemplate}">
+                
+            <go:Diagram.Layout>
+                <go:GridLayout CellSize="5 5" WrappingColumn="1" Sorting="Forward" />
+            </go:Diagram.Layout>
+        </go:Palette>
+            </Grid>
+            <Grid  Grid.Row="1">
+                <Button Content="OK" Height="29" HorizontalAlignment="Center" Click="button_OK_Click_1" Name="button_OK" VerticalAlignment="Center" Width="74"/>
+                <Button Content="Cancel" Height="29" HorizontalAlignment="Center" Click="button_Cancel_Click_1" Name="button_Cancel" Width="74" Margin="0,80,0,0"/>
+            </Grid>
+        </Grid>
+        
+        
+        <go:Diagram x:Name="myDiagram" Grid.Column="1"
+                Padding="10" BorderBrush="Gray" BorderThickness="1"
+                HorizontalContentAlignment="Stretch"
+                VerticalContentAlignment="Stretch"
+                DragSelectingTool="{ x:Null}"
+                NodeTemplate="{StaticResource MyNodeTemplate}"
+                LinkTemplate="{StaticResource MyLinkTemplate}">
+        </go:Diagram>
+        
+        <Grid ShowGridLines="True" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid  ShowGridLines="True" Grid.Row="0">
+                <WebBrowser Name="processDescription" HorizontalAlignment="Center" VerticalAlignment="Top" />
+            </Grid>
+            <Grid ShowGridLines="True" Grid.Row="1">
+            <Label FontWeight="Bold"  FontSize="15" Name="ProcessParameter" Content="Process Options" Height="29" HorizontalAlignment="Center" VerticalAlignment="Top"></Label>
+                <ScrollViewer VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Visible">
+                <Grid Name="panelLayout">
+                        <Label Content="adsfadsfasdfadddddddddddddddddddddddddddddddddddddddddddddddddasf" Width="500"></Label>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

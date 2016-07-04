@@ -119,17 +119,6 @@ namespace SMining.Core.Data
         }
 
         /**
-         * 데이터를 비동기로 수행할 경우, 종료시까지 기다림
-         */
-        public void Join()
-        {
-            if (taskRunner != null && taskRunner.IsAlive)
-            {
-                taskRunner.Join();
-            }
-        }
-
-        /**
          * 특정 이름의 데이터 처리를 수행
          * 
          * @param[in] name 수행할 작업의 이름
