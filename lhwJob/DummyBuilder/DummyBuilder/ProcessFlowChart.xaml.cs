@@ -30,20 +30,19 @@ namespace DummyBuilder
 
     public partial class ProcessFlowChart : Window
     {
-        public List<DummyProcessParent> allProcList;
+        public List<DataProcess> allProcList;
         public List<DataProcess> finalProcList;
         int[,] adjMatrix;
         public MyNodeData start;
         public MyNodeData end;
+        public List<TreeViewItem> parentTree = new List<TreeViewItem>();
 
         
         
 
-        public ProcessFlowChart(List<DummyProcessParent> procList)
+        public ProcessFlowChart(List<DataProcess> procList)
         {
             InitializeComponent();
-
-
 
             allProcList = procList;
             finalProcList = new List<DataProcess>();
@@ -68,68 +67,75 @@ namespace DummyBuilder
 
             //treeview 형식으로 process 집어넣기
             //treeview 형식은 일단 parent가 존재하고 그 parent에 data process list가 있고 이름이 있음
-            foreach(DummyProcessParent processParent in allProcList)
+            foreach(DataProcess dataProcess in allProcList)
             {
-                TreeViewItem item = new TreeViewItem();
-                item.Header = processParent.nameOfCategory;
-                item.AllowDrop = true;
+                String currName = dataProcess.Name;
 
-                Palette p = new Palette();
-                p.Model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
-                p.NodeTemplate = (DataTemplate)FindResource("MyNodeTemplate");
-                p.BorderBrush = Brushes.Azure;
-                p.BorderThickness = new Thickness(1);
-                p.Width = 267;
-                p.Height = 303;
-                p.HorizontalAlignment = HorizontalAlignment.Left;
-                p.VerticalAlignment = VerticalAlignment.Top;
-                p.Background = Brushes.White;
+                String[] divided = currName.Split('.');
 
-                p.GridSnapCellSize = new Size(5,5);
+                //만일 parent 없는 경우 바로 말단으로 취급
 
-                Northwoods.GoXam.Layout.GridLayout g = new Northwoods.GoXam.Layout.GridLayout();
+                //3가지로 나누자, 제일 윗단 parent, 중간 parent, 말단 leaf로 나눕시다d
 
-                g.CellSize = new Size(5, 5);
-                g.WrappingColumn = 1;
-                g.Sorting = Northwoods.GoXam.Layout.GridSorting.Forward;
+                var currParent = new TreeViewItem();
 
-                p.Layout = g;
-
-                
-                //WrappingColumn="1" Sorting="Forward"
-                List<MyNodeData> initNodeData = new List<MyNodeData>();
-                
-                foreach (DataProcess dataProcess in processParent.procList)
-                {
-                    initNodeData.Add(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName=processParent.nameOfCategory, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
-                }
-
-                
-
-                p.Model.NodesSource = initNodeData;
-
-                //item.Items.Add(p);
-                foreach (DataProcess dataProcess in processParent.procList)
+                for (int i = 0; i < divided.Length; i++)
                 {
                     
-                    
 
-                    MyNodeTVVersion nodeItem = new MyNodeTVVersion(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName = processParent.nameOfCategory, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
-                    nodeItem.AllowDrop = true;
-                    nodeItem.Header = nodeItem.myData.Name;
 
-                    
-                    item.Items.Add(nodeItem);
+                    if (i == 0)//제일 윗단 parent
+                    {
+                        bool isExistParent = false;
+
+                        foreach (TreeViewItem treeitem in parentTree)
+                        {
+                            if ((string)(treeitem.Header) == divided[i])
+                            {
+                                currParent = treeitem;
+                                isExistParent = true;
+                                break;
+                            }
+                        }
+
+                        if (isExistParent == false)
+                        {
+                            TreeViewItem item = new TreeViewItem();
+                            item.Header = divided[i];
+                            item.AllowDrop = true;
+
+                            parentTree.Add(item);
+
+                            currParent = parentTree[parentTree.Count - 1];
+                        }
+                    }
+                    else if (i > 0 && i < divided.Length - 1)//중간의 parent일 경우
+                    {
+                        TreeViewItem item = new TreeViewItem();
+                        item.Header = divided[i];
+                        item.AllowDrop = true;
+
+                        currParent.Items.Add(item);
+
+                        currParent = item;
+                    }
+                    else//완전 말단 leaf일 경우
+                    {
+                        MyNodeTVVersion nodeItem = new MyNodeTVVersion(new MyNodeData() { Key = idx.ToString(), FuncBinding = (DataProcess)dataProcess.Clone(), Name = dataProcess.Name, ParentName = currParent.Header as String, Color = "Lavender", inputNum = 1, outputNum = 1, Deletable = true });
+                        nodeItem.AllowDrop = true;
+                        nodeItem.Header = divided[i];
+
+                        if (currParent != null)
+                            currParent.Items.Add(nodeItem);
+                    }
                 }
-                
-
-                treeView.Items.Add(item);
-                
             }
+                
 
-
-
-            //myPalette2.Model.NodesSource = initNodeData;
+            foreach(TreeViewItem item in parentTree)
+            {
+                treeView.Items.Add(item);
+            }  
         }
 
         
@@ -161,17 +167,11 @@ namespace DummyBuilder
             {
                 for (int i = 0; i < allProcList.Count; i++)
                 {
-                    if (allProcList[i].nameOfCategory == node.ParentName)
+                    if (allProcList[i].Name == node.Name)
                     {
-                        for (int j = 0; j < allProcList[i].procList.Count; j++)
-                        {
-                            if (allProcList[i].procList[j].Name == node.FuncBinding.Name)
-                            {
-                                node.FuncBinding = (DataProcess)allProcList[i].procList[j].Clone();
-                                node.isInit = false;
-                                break;
-                            }
-                        }
+                        node.FuncBinding = (DataProcess)allProcList[i].Clone();
+                        node.isInit = false;
+                        break;
                     }
                 }
             }
@@ -323,8 +323,6 @@ namespace DummyBuilder
             finalProcList.Clear();
             
 
-            
-
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
 
@@ -334,7 +332,7 @@ namespace DummyBuilder
                 MessageBox.Show("종료점이 연결되지 않았습니다.");
             else
                 buildProcessTree(nodeList);
-
+            
 
         }
         //cycle 여부 확인하는 함수
@@ -349,6 +347,7 @@ namespace DummyBuilder
             //방문하지 않은 모든 node에 대해서 DFS 수행, recursive stack에 만날 시 cycle로 인정
             for (int i = 0; i < totalNode; i++)
             {
+                //물론 cycle에서 어느 부분이 발생했는지 알려줘야 합니다.
                 if (isVisit[i] == false)
                     if (cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)//1번이라도 cycle 발생시 바로 종료
                         return true;
@@ -379,6 +378,87 @@ namespace DummyBuilder
             return false;
         }
 
+        //분기점을 포함한 process list를 만들자 우가우가
+        private void buildProcessTreeWithChain(List<DataProcess> processList, int[,] adjMatrix)
+        {
+            //adjMatrix[from, to] 형식으로 사용하자
+            int totalNode = adjMatrix.GetLength(0);
+            int numProcess = totalNode - 2;
+
+            bool[] isVisit = new bool[totalNode];
+            List<int> searchList = new List<int>();
+
+            List<int> childNum = new List<int>();
+
+
+            searchList.Add(0);
+
+            int currIdx;
+
+            //일단 공통되는 node를 모두 찾는 함수를 만들자
+
+            
+
+            for (int i = 0; i < totalNode; i++)
+            {
+                int sum = 0;
+
+                for (int j = 0; j < totalNode; j++)
+                {
+                    sum = sum + adjMatrix[i, j];    
+                }
+
+                childNum.Add(sum);
+
+            }
+
+            //LHWLHW
+
+            List<DataProcess> mainList = new List<DataProcess>();
+
+            while (searchList.Count != 0)
+            {
+                currIdx = searchList[0];
+                isVisit[currIdx] = true;
+
+                if (currIdx > 1)
+                {
+                    mainList.Add(processList[currIdx]);
+                }
+                
+                for (int i = 0; i < totalNode; i++)
+                {
+                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
+                    {
+                        searchList.Insert(1, i);
+                    }
+                }
+
+                searchList.RemoveAt(0);
+
+            }
+            /*
+             *   while (searchList.Count != 0)
+            {
+                currIdx = searchList[0];
+                isVisit[currIdx] = true;
+
+                if (currIdx > 1)
+                    res = res + processList[currIdx-2] + " ";
+
+                for (int i = 0; i < totalNode; i++)
+                {
+                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
+                        searchList.Insert(1, i);
+                }
+
+                searchList.RemoveAt(0);
+            }
+             * */
+
+
+
+        }
 
         //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성, 탐색하는 거는 따로 구현을 다시 해야함
         private void travelProcessTree(List<DataProcess> processList, int[,] adjMatrix)
@@ -433,8 +513,6 @@ namespace DummyBuilder
             
             List<int> searchList = new List<int>();
             
-            
-
             searchList.Add(0);
 
             
@@ -469,7 +547,7 @@ namespace DummyBuilder
                     Node nextNode = k.ToNode;
                     MyNodeData nextNodeTemplate = nextNode.Data as MyNodeData;
                     adjMatrix[currNodeTemplate._idx, nextNodeTemplate._idx] = 1;
-
+                    
                     if (isVisit[nextNodeTemplate._idx] == false)
                     {
                         searchList.Insert(1, nextNodeTemplate._idx);
@@ -490,9 +568,9 @@ namespace DummyBuilder
 
                 if (isCycle == true)
                     MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요");
-                else
-                    MessageBox.Show(res);
             }
+
+            travelProcessTree(finalProcList, adjMatrix);
 
         }
 
@@ -511,8 +589,9 @@ namespace DummyBuilder
             {
                 TreeViewItem tvi = e.Source as TreeViewItem;
 
-                if (tvi == null)
+                if (tvi.Items.Count == 0)//count가 0일 경우 말단 item임 따라서 드래그 앤 드랍 가능함
                 {
+                    
                     MyNodeTVVersion nodeTV = e.Source as MyNodeTVVersion;
 
                     DragDrop.DoDragDrop(treeView, nodeTV, DragDropEffects.Move);
@@ -524,11 +603,12 @@ namespace DummyBuilder
         private void myDiagram_Drop_1(object sender, DragEventArgs e)
         {
             MyNodeTVVersion nodeTV = e.Data.GetData(typeof(MyNodeTVVersion)) as MyNodeTVVersion;
-            nodeTV.myData.Location = e.GetPosition(myDiagram);
+            MyNodeData generatedNode = nodeTV.myData.Clone() as MyNodeData;
+            generatedNode.Location = e.GetPosition(myDiagram);
 
-            myDiagram.Model.AddNode(nodeTV.myData.Clone());
-
-
+            myDiagram.StartTransaction("add node");
+            myDiagram.Model.AddNode(generatedNode);
+            myDiagram.CommitTransaction("add node");
         }
     }
 
