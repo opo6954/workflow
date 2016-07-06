@@ -378,43 +378,53 @@ namespace DummyBuilder
             return false;
         }
 
+        private void findAllPath(List<int> previous, int current, int destination, List<DataProcess> processList, int[,] adjMatrix)
+        {
+            previous.Add(current);
+
+            if (current == destination)
+            {
+                String res = "";
+                for (int i = 0; i < previous.Count; i++)
+                {
+                    if (previous[i] != 0 && previous[i] != 1)
+                    {
+                        res = res + " " + processList[previous[i] - 2];
+                    }
+                }
+
+                MessageBox.Show(res);
+                previous.RemoveAt(previous.Count - 1);
+            }
+            else
+            {
+                for (int i = 0; i < adjMatrix.GetLength(0); i++)
+                {
+                    if (adjMatrix[current, i] != 0)
+                        findAllPath(previous, i, destination, processList, adjMatrix);
+                }
+                previous.RemoveAt(previous.Count - 1);
+            }
+
+        }
+
+
         //분기점을 포함한 process list를 만들자 우가우가
         private void buildProcessTreeWithChain(List<DataProcess> processList, int[,] adjMatrix)
         {
-            //adjMatrix[from, to] 형식으로 사용하자
-            int totalNode = adjMatrix.GetLength(0);
-            int numProcess = totalNode - 2;
+            findAllPath(new List<int>(), 0, 1, processList, adjMatrix);
+            /*
+            int totalNode = adjMatrix.GetLength(0);//without start, end node
+            int numProcess = totalNode - 2;//including start, end node
+
+            String res = "";
 
             bool[] isVisit = new bool[totalNode];
             List<int> searchList = new List<int>();
 
-            List<int> childNum = new List<int>();
-
-
             searchList.Add(0);
 
             int currIdx;
-
-            //일단 공통되는 node를 모두 찾는 함수를 만들자
-
-            
-
-            for (int i = 0; i < totalNode; i++)
-            {
-                int sum = 0;
-
-                for (int j = 0; j < totalNode; j++)
-                {
-                    sum = sum + adjMatrix[i, j];    
-                }
-
-                childNum.Add(sum);
-
-            }
-
-            //LHWLHW
-
-            List<DataProcess> mainList = new List<DataProcess>();
 
             while (searchList.Count != 0)
             {
@@ -422,43 +432,21 @@ namespace DummyBuilder
                 isVisit[currIdx] = true;
 
                 if (currIdx > 1)
-                {
-                    mainList.Add(processList[currIdx]);
-                }
-                
-                for (int i = 0; i < totalNode; i++)
-                {
-                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
-                    {
-                        searchList.Insert(1, i);
-                    }
-                }
-
-                searchList.RemoveAt(0);
-
-            }
-            /*
-             *   while (searchList.Count != 0)
-            {
-                currIdx = searchList[0];
-                isVisit[currIdx] = true;
-
-                if (currIdx > 1)
-                    res = res + processList[currIdx-2] + " ";
+                    res = res + processList[currIdx - 2] + " ";
 
                 for (int i = 0; i < totalNode; i++)
                 {
                     if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
-                        searchList.Insert(1, i);
+                        searchList.Add(i);
                 }
 
                 searchList.RemoveAt(0);
             }
-             * */
-
-
-
+            MessageBox.Show("BFS: " + res);
+            */
         }
+
+
 
         //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성, 탐색하는 거는 따로 구현을 다시 해야함
         private void travelProcessTree(List<DataProcess> processList, int[,] adjMatrix)
@@ -571,6 +559,8 @@ namespace DummyBuilder
             }
 
             travelProcessTree(finalProcList, adjMatrix);
+
+            buildProcessTreeWithChain(finalProcList, adjMatrix);
 
         }
 
