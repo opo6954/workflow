@@ -506,7 +506,7 @@ namespace DummyBuilder
         }
 
         //만들어진 chain을 확인하는 함수, 디버깅용
-        private void searchProcessChain(chainComponent searchList)
+        private void searchProcessChain(List<DataProcess> processList, chainComponent searchList)
         {
             if (searchList is chainMultiComponent)
             {
@@ -516,14 +516,26 @@ namespace DummyBuilder
 
                 for (int i = 0; i < myMulti.multiChain.Count; i++)
                 {
-                    searchProcessChain(myMulti.multiChain[i]);
+                    searchProcessChain(processList, myMulti.multiChain[i]);
                 }
 
                 pathName = pathName + " ] ";
             }
             else
             {
-                pathName = pathName + " " + searchList.idx;
+                //pathName = pathName + " " + searchList.idx.ToString();
+                
+                if (searchList.idx > 1)
+                    pathName = pathName + " " + processList[searchList.idx - 2].Name;
+                else
+                {
+                    if (searchList.idx == 0)
+                        pathName = pathName + " start ";
+                    else if (searchList.idx == 1)
+                        pathName = pathName + " end ";
+
+                }
+                  
             }   
         }
 
@@ -559,10 +571,13 @@ namespace DummyBuilder
             }
 
 
-            searchProcessChain(mainChain);
+            searchProcessChain(finalProcList, mainChain);
 
             //디버깅용 path 출력
             MessageBox.Show(pathName);
+
+            //clear
+            pathName = "";
 
             
             DataProcessChain finalResult =  makeDataProcessChain(mainChain, processList,0) as DataProcessChain;
@@ -608,7 +623,7 @@ namespace DummyBuilder
 
                 searchList.RemoveAt(0);
             }
-            MessageBox.Show(res);
+            
             
 
         }
@@ -773,18 +788,7 @@ namespace DummyBuilder
         }
 
     }
-        /*
-         * 
-        struct chainMultiComponent : chainComponent
-        {
-            List<int> chainInfo;
-        };
-
-        struct chainComponent
-        {
-
-        };
-         * */
+        
 
 
     [Serializable]
