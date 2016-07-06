@@ -32,20 +32,29 @@ namespace DummyBuilder
     {
         public List<DataProcess> allProcList;
         public List<DataProcess> finalProcList;
+        public List<DataProcess> result;
         int[,] adjMatrix;
         public MyNodeData start;
         public MyNodeData end;
+
+        //treeview에서의 parent를 저장해놓기 위해서
         public List<TreeViewItem> parentTree = new List<TreeViewItem>();
 
-        
+        //실제 탐색하는 path --> 디버깅용
+        public String pathName;
         
 
+        
         public ProcessFlowChart(List<DataProcess> procList)
         {
             InitializeComponent();
 
+            
+
+
             allProcList = procList;
             finalProcList = new List<DataProcess>();
+            result = new List<DataProcess>();
 
             var model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
 
@@ -335,28 +344,32 @@ namespace DummyBuilder
             
 
         }
-        //cycle 여부 확인하는 함수
-        //요거만 짜면 될듯
         
-        private bool isExistCycle(List<DataProcess> processList, int[,] adjMatrix)
+        //cycle존재를 확인하는 함수, 최초 발견한 cyclepath를 넘겨준다.
+        private bool isExistCycle(int[,] adjMatrix, List<int> cyclePath)
         {
             int totalNode = adjMatrix.GetLength(0);
             bool[] isVisit = new bool[totalNode];
             bool[] isRecursiveStack = new bool[totalNode];
+            
 
             //방문하지 않은 모든 node에 대해서 DFS 수행, recursive stack에 만날 시 cycle로 인정
             for (int i = 0; i < totalNode; i++)
             {
                 //물론 cycle에서 어느 부분이 발생했는지 알려줘야 합니다.
                 if (isVisit[i] == false)
-                    if (cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)//1번이라도 cycle 발생시 바로 종료
+                    if (cycleSearch(cyclePath,adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)//1번이라도 cycle 발생시 바로 종료
+                    {
                         return true;
+                    }
             }
             return false;
         }
-        //recursive function for DFS for checking cycle,
-        public bool cycleSearch(List<DataProcess> processList, int[,] adjMatrix, int idx,ref bool[] isVisit,ref bool[] isRecursiveStack)
+
+        //cycle을 확인하는 함수임
+        public bool cycleSearch(List<int> previous, int[,] adjMatrix, int idx,ref bool[] isVisit,ref bool[] isRecursiveStack)
         {
+            previous.Add(idx);
             if (isVisit[idx] == false)
             {
                 isVisit[idx] = true;
@@ -366,89 +379,205 @@ namespace DummyBuilder
                 {
                     if (adjMatrix[idx, i] == 1)
                     {
-                        if (isVisit[i] == false && cycleSearch(processList, adjMatrix, i, ref isVisit, ref isRecursiveStack)==true)
+                        if (isVisit[i] == false && cycleSearch(previous, adjMatrix, i, ref isVisit, ref isRecursiveStack) == true)
+                        {
                             return true;
+                        }
                         else if (isRecursiveStack[i] == true)//if it meets the recursiveStack, it is cycle, so return true
+                        {
+                            previous.Add(i);
+
+                            
+
                             return true;
+                        }
                     }
                 }
+                previous.RemoveAt(previous.Count - 1);
             }
             //if all jobs from the child are finished, it is deleted from the recursiveStack and return false
             isRecursiveStack[idx] = false;
             return false;
         }
 
-        private void findAllPath(List<int> previous, int current, int destination, List<DataProcess> processList, int[,] adjMatrix)
-        {
-            previous.Add(current);
 
-            if (current == destination)
+        private void findJunctionNode(List<DataProcess> processList, int[,] adjMatrix, ref int[] totInNode,ref int[] totOutNode)
+        {
+            int sumInto = 0;
+            int sumOutfrom = 0;
+            for(int i=0; i<adjMatrix.GetLength(0); i++)
             {
-                String res = "";
-                for (int i = 0; i < previous.Count; i++)
+                sumInto = 0;
+                sumOutfrom = 0;
+
+                for (int j = 0; j < adjMatrix.GetLength(0); j++)
                 {
-                    if (previous[i] != 0 && previous[i] != 1)
+                    sumOutfrom = sumOutfrom + adjMatrix[i, j];//i에서 나가는 노드 총합
+                    sumInto = sumInto + adjMatrix[j, i];//i로 들어오는 노드 총합
+                }
+                
+                totInNode[i] = sumInto;//i번 노드의 들어오는 노드 총합
+                totOutNode[i] = sumOutfrom;//i번 노드의 나가는 노드 총합
+            }
+        }
+               
+        //재귀호출로 chain 형태로 그래프를 변형하자
+        //임시로 chainMultiComponent와 chainComponent라고 하는 클래스를 정의했는데 나중에 dataProcesschain 만드는 함수랑 합칠 수 있을듯 아직 chain만드는게 correct하지 않아서 일단 냅둡시다
+        private int makeChainRecursive(List<DataProcess> processList, int[,] adjMatrix, int currIdx,
+            int[] totInNode, int[] totOutNode, chainMultiComponent currChainComponent, chainMultiComponent prevChainComponent, ref List<int> nonSearchedIdx, ref List<chainMultiComponent> nonSearchCurrChain, bool isStart)
+        {
+            //만일 들어오는 node일 경우 그 idx를 리턴, 그 idx부터 다시 탐색을 시작한다
+
+                if (totInNode[currIdx] > 1 && isStart == false)
+                {
+                    if (nonSearchedIdx.Contains(currIdx) == false)
                     {
-                        res = res + " " + processList[previous[i] - 2];
+                        nonSearchedIdx.Add(currIdx);
+                        nonSearchCurrChain.Add(prevChainComponent);
+                    }
+
+                    return currIdx;
+                }
+                //그냥 단일 node일 경우 || 처음 시작점이 들어오는 노드일시 무시하고 검색 시작하자(이미 이전단계에서 하던거니까)
+                if ((totInNode[currIdx] <= 1 && totOutNode[currIdx] <= 1) || (totOutNode[currIdx] <= 1 && isStart == true))
+                {
+                    chainComponent myChainComponent = new chainComponent();
+                    myChainComponent.idx = currIdx;
+                    currChainComponent.multiChain.Add(myChainComponent);
+
+                    for (int i = 0; i < adjMatrix.GetLength(0); i++)
+                    {
+                        if (adjMatrix[currIdx, i] != 0)
+                        {
+                            makeChainRecursive(processList, adjMatrix, i, totInNode, totOutNode, currChainComponent, prevChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
+                        }
                     }
                 }
+                //만일 또 다른 나가는 node일 경우, 새롭게 chain을 만들자d
+                if (totOutNode[currIdx] > 1)
+                {
+                    chainComponent myChainComponent = new chainComponent();
+                    myChainComponent.idx = currIdx;
+                    currChainComponent.multiChain.Add(myChainComponent);
 
-                MessageBox.Show(res);
-                previous.RemoveAt(previous.Count - 1);
+                    for (int i = 0; i < adjMatrix.GetLength(0); i++)
+                    {
+                        if (adjMatrix[currIdx, i] != 0)
+                        {
+                            chainMultiComponent myChain = new chainMultiComponent();
+                            currChainComponent.multiChain.Add(myChain);
+
+                            makeChainRecursive(processList, adjMatrix, i, totInNode, totOutNode, myChain, currChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
+                        }
+                    }
+                }
+            return 0;
+        }
+
+        //만들어진 chainComponent를 이용해서 dataProcessChain으로 변형하기, makeChainRecursive함수랑 추후에 합칠 수 있을듯
+        private DataProcess makeDataProcessChain(chainComponent searchList, List<DataProcess> processList, int cnt)
+        {
+            if (searchList is chainMultiComponent)//list일시...
+            {
+                chainMultiComponent myMulti = searchList as chainMultiComponent;
+
+                DataProcessChain myChain = new DataProcessChain();
+                myChain.Name = "Data Chain" + cnt.ToString();
+
+                for (int i = 0; i < myMulti.multiChain.Count; i++)
+                {
+                    myChain.addProcess(makeDataProcessChain(myMulti.multiChain[i],processList,cnt++));
+                }
+                return myChain;
+            }
+            else//single node일시...
+            {
+                if (searchList.idx > 1)
+                {
+                    
+                    return processList[searchList.idx - 2].Clone() as DataProcess;
+                }
+                else
+                {
+                    
+                    return processList[0];
+                }
+            }
+        }
+
+        //만들어진 chain을 확인하는 함수, 디버깅용
+        private void searchProcessChain(chainComponent searchList)
+        {
+            if (searchList is chainMultiComponent)
+            {
+                chainMultiComponent myMulti = searchList as chainMultiComponent;
+                
+                pathName = pathName + " [ ";
+
+                for (int i = 0; i < myMulti.multiChain.Count; i++)
+                {
+                    searchProcessChain(myMulti.multiChain[i]);
+                }
+
+                pathName = pathName + " ] ";
             }
             else
             {
-                for (int i = 0; i < adjMatrix.GetLength(0); i++)
-                {
-                    if (adjMatrix[current, i] != 0)
-                        findAllPath(previous, i, destination, processList, adjMatrix);
-                }
-                previous.RemoveAt(previous.Count - 1);
-            }
-
+                pathName = pathName + " " + searchList.idx;
+            }   
         }
 
-
-        //분기점을 포함한 process list를 만들자 우가우가
+        //chain만드는 root함수
         private void buildProcessTreeWithChain(List<DataProcess> processList, int[,] adjMatrix)
         {
-            findAllPath(new List<int>(), 0, 1, processList, adjMatrix);
-            /*
-            int totalNode = adjMatrix.GetLength(0);//without start, end node
-            int numProcess = totalNode - 2;//including start, end node
+            int[] totInNode = new int[adjMatrix.GetLength(0)];
+            int[] totOutNode = new int[adjMatrix.GetLength(0)];
 
-            String res = "";
+            //모든 node의 들어오는 노드 총합 및 나가는 노드 총합을 totInNode랑 totOutNode에 저장한다
+            findJunctionNode(processList, adjMatrix, ref totInNode, ref totOutNode);
 
-            bool[] isVisit = new bool[totalNode];
+
             List<int> searchList = new List<int>();
+            List<chainMultiComponent> searchListCurrChain = new List<chainMultiComponent>();
+
+
 
             searchList.Add(0);
+            searchListCurrChain.Add(new chainMultiComponent());
+
+            chainMultiComponent mainChain = new chainMultiComponent();
 
             int currIdx;
 
             while (searchList.Count != 0)
             {
                 currIdx = searchList[0];
-                isVisit[currIdx] = true;
 
-                if (currIdx > 1)
-                    res = res + processList[currIdx - 2] + " ";
-
-                for (int i = 0; i < totalNode; i++)
-                {
-                    if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
-                        searchList.Add(i);
-                }
-
+                makeChainRecursive(processList, adjMatrix, currIdx, totInNode, totOutNode, mainChain, mainChain, ref searchList, ref searchListCurrChain, true);
                 searchList.RemoveAt(0);
+                searchListCurrChain.RemoveAt(0);
             }
-            MessageBox.Show("BFS: " + res);
-            */
+
+
+            searchProcessChain(mainChain);
+
+            //디버깅용 path 출력
+            MessageBox.Show(pathName);
+
+            
+            DataProcessChain finalResult =  makeDataProcessChain(mainChain, processList,0) as DataProcessChain;
+
+            //start랑 end node는 뺍시다
+            //최종 list of dataprocess는 result에 저장됨
+            for (int i = 1; i < finalResult.Process.Count-1; i++)
+            {
+                result.Add(finalResult.Process[i]);
+            }
         }
 
 
 
-        //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성, 탐색하는 거는 따로 구현을 다시 해야함
+        //최종 output은 finalProcList, 즉 모든 process가 들어간 list와 process의 연결 정보를 알려주는 adj matrix로 구성
         private void travelProcessTree(List<DataProcess> processList, int[,] adjMatrix)
         {
             int totalNode = adjMatrix.GetLength(0);//without start, end node
@@ -486,9 +615,6 @@ namespace DummyBuilder
 
         private void buildProcessTree(List<Node> nodeList)
         {
-            bool endLoop = false;
-            bool success = false;
-            bool noInit = false;
             bool loopContinuous = false;
 
             Node currNode;
@@ -551,17 +677,41 @@ namespace DummyBuilder
             }
             else
             {
-                //travelProcessTree(finalProcList, adjMatrix);
-                bool isCycle = isExistCycle(finalProcList, adjMatrix);
+                List<int> cyclePath = new List<int>();
+
+                bool isCycle = isExistCycle(adjMatrix,cyclePath);
 
                 if (isCycle == true)
-                    MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요");
+                {
+                    int idx=-1;
+                    String cyclePathTxt = "";
+
+                    for (int i = 0; i < cyclePath.Count-1; i++)
+                    {
+                        if (cyclePath[i] == cyclePath[cyclePath.Count - 1])
+                        {
+                            idx = i;
+                            break;
+                        }
+                    }
+                    if (idx != -1)
+                    {
+                        for (int i = idx; i < cyclePath.Count; i++)
+                        {
+                            cyclePathTxt = cyclePathTxt + finalProcList[cyclePath[i] - 2].Name;
+                            if (i < cyclePath.Count - 1)
+                                cyclePathTxt = cyclePathTxt + "->";
+                        }
+                    }
+                    
+                    MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요\n" + "Cycle 위치: " + cyclePathTxt);
+                }
+                else
+                {
+                    travelProcessTree(finalProcList, adjMatrix);
+                    buildProcessTreeWithChain(finalProcList, adjMatrix);
+                }
             }
-
-            travelProcessTree(finalProcList, adjMatrix);
-
-            buildProcessTreeWithChain(finalProcList, adjMatrix);
-
         }
 
 
@@ -601,6 +751,41 @@ namespace DummyBuilder
             myDiagram.CommitTransaction("add node");
         }
     }
+
+    [Serializable]
+    public class chainComponent
+    {
+        public int idx;//index of single component
+
+        public chainComponent()
+        {
+            
+        }
+    };
+    [Serializable]
+    public class chainMultiComponent : chainComponent
+    {
+        public List<chainComponent> multiChain;
+
+        public chainMultiComponent()
+        {
+            multiChain = new List<chainComponent>();
+        }
+
+    }
+        /*
+         * 
+        struct chainMultiComponent : chainComponent
+        {
+            List<int> chainInfo;
+        };
+
+        struct chainComponent
+        {
+
+        };
+         * */
+
 
     [Serializable]
     public class MyNodeTVVersion : TreeViewItem
