@@ -14,7 +14,6 @@ using System.Windows.Shapes;
 using System.Collections.ObjectModel;
 using Northwoods.GoXam;
 using Northwoods.GoXam.Model;
-using Northwoods.GoXam.Layout;
  
 
 using SMining.Core.Data;
@@ -37,15 +36,13 @@ namespace SMiningClient.WPF
         int[,] adjMatrix;
         public MyNodeData start;
         public MyNodeData end;
-        
 
         //treeview에서의 parent를 저장해놓기 위해서
         public List<TreeViewItem> parentTree = new List<TreeViewItem>();
 
         //실제 탐색하는 path --> 디버깅용
         public String pathName;
-
-        DiagramLayout initLayout;
+        
 
         
         public ProcessFlowChart(List<DataProcess> procList)
@@ -62,7 +59,7 @@ namespace SMiningClient.WPF
             var model = new GraphLinksModel<MyNodeData, String, String, MyLinkData>();
 
             start = new MyNodeData() { Key="Start", isInit = false, Name="Start", Color="LightBlue", inputNum=0, outputNum=1, Location= new Point(10,10), _Deletable=false};
-            end = new MyNodeData() { Key="End", isInit=false, Name="End", Color="LightBlue", inputNum=1, outputNum=0, Location = new Point(400, 550), _Deletable=false};
+            end = new MyNodeData() { Key="End", isInit=false, Name="End", Color="LightBlue", inputNum=1, outputNum=0, Location = new Point(200,10), _Deletable=false};
 
             model.NodesSource = new ObservableCollection<MyNodeData>() {
                 start,end
@@ -149,7 +146,7 @@ namespace SMiningClient.WPF
                         MyNodeTVVersion nodeItem = new MyNodeTVVersion(nodeData);
                         nodeItem.AllowDrop = true;
                         nodeItem.Header = divided[i];
-                        
+
                         if (currParent != null)
                             currParent.Items.Add(nodeItem);
                     }
@@ -160,14 +157,8 @@ namespace SMiningClient.WPF
             foreach(TreeViewItem item in parentTree)
             {
                 treeView.Items.Add(item);
-            }
-
-
-            initLayout = myDiagram.Layout as DiagramLayout;
-
-
+            }  
         }
-
 
         
         //processor 아이콘 누를 경우의 이벤트로서 누르면 description하고 parameter 입력하는 창 갱신해야함
@@ -346,6 +337,12 @@ namespace SMiningClient.WPF
                     return n;
             }
             return null;
+        }
+
+
+        private void button_OK_Click_1(object sender, RoutedEventArgs e)
+        {
+            
         }
         
         //cycle존재를 확인하는 함수, 최초 발견한 cyclepath를 넘겨준다.
@@ -551,6 +548,7 @@ namespace SMiningClient.WPF
             //모든 node의 들어오는 노드 총합 및 나가는 노드 총합을 totInNode랑 totOutNode에 저장한다
             findJunctionNode(processList, adjMatrix, ref totInNode, ref totOutNode);
 
+
             List<int> searchList = new List<int>();
             List<chainMultiComponent> searchListCurrChain = new List<chainMultiComponent>();
 
@@ -630,7 +628,7 @@ namespace SMiningClient.WPF
 
         }
 
-        private bool buildProcessTree(List<Node> nodeList)
+        private void buildProcessTree(List<Node> nodeList)
         {
             bool loopContinuous = false;
 
@@ -644,7 +642,9 @@ namespace SMiningClient.WPF
             
             List<int> searchList = new List<int>();
             
-            searchList.Add(0);            
+            searchList.Add(0);
+
+            
 
             //연결된 모든 process를 한 list에 몽땅 집어넣자
             for (int i = 0; i < nodeList.Count; i++)
@@ -689,7 +689,6 @@ namespace SMiningClient.WPF
             if (loopContinuous == false)
             {
                 MessageBox.Show("시작에서 끝점까지 연결이 되어있지 않습니다.");
-                return false;
             }
             else
             {
@@ -721,22 +720,18 @@ namespace SMiningClient.WPF
                     }
                     
                     MessageBox.Show("cycle이 존재합니다. 다시 Process를 설정하세요\n" + "Cycle 위치: " + cyclePathTxt);
-                    return false;
                 }
                 else
                 {
                     travelProcessTree(finalProcList, adjMatrix);
                     buildProcessTreeWithChain(finalProcList, adjMatrix);
                 }
-                return true;
             }
         }
 
         private void treeView_PreviewMouseLeftButtonDown_1(object sender, MouseButtonEventArgs e)
         {
             DependencyObject uie = treeView.InputHitTest(e.GetPosition(treeView)) as DependencyObject;
-
-            
 
             if (uie is TextBlock)
             {
@@ -747,16 +742,6 @@ namespace SMiningClient.WPF
                     
                     MyNodeTVVersion nodeTV = e.Source as MyNodeTVVersion;
 
-                    nodeTV.Focus();
-                    
-
-                    if (nodeTV.myData._dataProcess != null)
-                    {
-                        string head = "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8'></head>" +
-                                    "<style type='text/css'> * { font-family: 맑은 고딕; font-size: 10pt; }; H2 { font-size: 14pt; }; </style><body>";
-                        processDescription.NavigateToString(head + nodeTV.myData._dataProcess.Description + "</body></html>");
-                    }
-
                     DragDrop.DoDragDrop(treeView, nodeTV, DragDropEffects.Move);
                     e.Handled = true;
                 }
@@ -765,18 +750,9 @@ namespace SMiningClient.WPF
 
         private void myDiagram_Drop_1(object sender, DragEventArgs e)
         {
-            MyNodeTVVersion nodeTV = e.Data.GetData(typeof(MyNodeTVVersion)) as MyNodeTVVersion;            
+            MyNodeTVVersion nodeTV = e.Data.GetData(typeof(MyNodeTVVersion)) as MyNodeTVVersion;
             MyNodeData generatedNode = nodeTV.myData.Clone() as MyNodeData;
             generatedNode.Location = e.GetPosition(myDiagram);
-
-            // Deep Copy
-            generatedNode._dataProcess = (DataProcess) nodeTV.myData._dataProcess.Clone();            
-            
-            // 드랍 지점을 센터로 조정
-            Point loc = generatedNode.Location;
-            loc.X -= 50;
-            loc.Y -= 50;
-            generatedNode.Location = loc;
 
             myDiagram.StartTransaction("add node");
             myDiagram.Model.AddNode(generatedNode);
@@ -789,15 +765,6 @@ namespace SMiningClient.WPF
             finalProcList.Clear();
             Close();
         }
-        //Layout 버튼 클릭시
-        private void OnLayoutButtonClick(object sender, RoutedEventArgs e)
-        {
-            var lay = new Northwoods.GoXam.Layout.LayeredDigraphLayout();
-            myDiagram.Layout = lay;
-            myDiagram.Layout.DoLayout(myDiagram.Nodes, myDiagram.Links);
-
-            myDiagram.Layout = initLayout;
-        } 
 
         // 확인 버튼 클릭시
         private void OnOkButtonClick(object sender, RoutedEventArgs e)
@@ -806,25 +773,12 @@ namespace SMiningClient.WPF
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
 
-            //node 불러와서 표시하는 것만 하면 됩니다
-
-            
-
             if ((nodeList[0].LinksOutOf).ToList<Link>().Capacity == 0)
-            {
                 MessageBox.Show("시작점이 연결되지 않았습니다.");
-                return;
-            }   
             else if ((nodeList[1].LinksInto).ToList<Link>().Capacity == 0)
-            {
                 MessageBox.Show("종료점이 연결되지 않았습니다.");
-                return;
-            }
-            
-            if(buildProcessTree(nodeList))
-            {
-                //Close();
-            }
+            else
+                buildProcessTree(nodeList);
         }
     }
 

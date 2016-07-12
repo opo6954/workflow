@@ -168,12 +168,10 @@
                     AllowDrop="True"
                     Drop="myDiagram_Drop_1"
                 Padding="10" BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1"
-                 
                 HorizontalContentAlignment="Stretch"
                 VerticalContentAlignment="Stretch"
                 NodeTemplate="{StaticResource MyNodeTemplate}"
                 LinkTemplate="{StaticResource MyLinkTemplate}" Margin="288,10,204,10" RenderTransformOrigin="0.5,0.5" Background="White">
-            
             <go:Diagram.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform/>
@@ -182,7 +180,6 @@
                     <TranslateTransform X="-0.744"/>
                 </TransformGroup>
             </go:Diagram.RenderTransform>
-            
         </go:Diagram>
         <Grid HorizontalAlignment="Left" Margin="10,325,0,10" Width="267" VerticalAlignment="Bottom">
             <Border BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1">
@@ -195,7 +192,6 @@
             <StackPanel Name="panelLayout" Orientation="Vertical" Width="155" Margin="0,5,10,5">
             </StackPanel>
         </ScrollViewer>
-        <Button Content="Layout" Height="29" HorizontalAlignment="Right" Click="OnLayoutButtonClick" Name="button_Layout" VerticalAlignment="Bottom" Width="74" Margin="0,0,109,50"/>
         <Button Content="OK" Height="29" HorizontalAlignment="Right" Click="OnOkButtonClick" Name="button_OK" VerticalAlignment="Bottom" Width="74" Margin="0,0,109,21"/>
         <Button Content="Cancel" Height="29" HorizontalAlignment="Right" Click="OnCancelButonClick" Name="button_Cancel" Width="74" Margin="708,520,10,21" VerticalAlignment="Bottom"/>
     </Grid>
