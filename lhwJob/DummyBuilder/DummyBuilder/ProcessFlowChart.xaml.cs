@@ -786,6 +786,7 @@ namespace SMiningClient.WPF
         // 취소 버튼 클릭시
         private void OnCancelButonClick(object sender, RoutedEventArgs e)
         {
+            result.Clear();
             finalProcList.Clear();
             Close();
         }
@@ -802,30 +803,262 @@ namespace SMiningClient.WPF
         // 확인 버튼 클릭시
         private void OnOkButtonClick(object sender, RoutedEventArgs e)
         {
+            saveCurrFlow();
+        }
+        //Debug Save 버튼 누를시 현재의 flow를 저장한다.
+
+        private void saveCurrFlow()
+        {
             finalProcList.Clear();
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
 
             //node 불러와서 표시하는 것만 하면 됩니다
 
-            
 
-            if ((nodeList[0].LinksOutOf).ToList<Link>().Capacity == 0)
+
+            if ((nodeList[0].LinksOutOf).ToList<Link>().Count == 0)
             {
                 MessageBox.Show("시작점이 연결되지 않았습니다.");
                 return;
-            }   
-            else if ((nodeList[1].LinksInto).ToList<Link>().Capacity == 0)
-            {
-                MessageBox.Show("종료점이 연결되지 않았습니다.");
-                return;
             }
-            
-            if(buildProcessTree(nodeList))
+            else if ((nodeList[1].LinksInto).ToList<Link>().Count == 0)
             {
+                connect2End(nodeList);
+            }
+
+            if (buildProcessTree(nodeList))
+            {
+                //DEBUG
                 //Close();
             }
         }
+        private void OnDebugSaveFlow(object sender, RoutedEventArgs e)
+        {
+            saveCurrFlow();
+            if (result.Count > 0)
+                MessageBox.Show("최근 flow가 저장되었습니다.");
+        }
+        //Debug Load 버튼 누를 시 가장 최근에 저장된 flow를 불러온다.
+        private void OnDebugLoadFlow(object sender, RoutedEventArgs e)
+        {
+            clearDiagram();
+
+            if (result.Count == 0)
+            {
+                MessageBox.Show("저장된 flow가 없습니다");
+
+            }
+            else//저장된 게 있을 경우 result를 node랑 link로 재구성하자
+            {
+                reconProcessChain2Node(result);
+            }
+        }
+        //Debug clear 버튼 누를 시 모든 flow가 지워진다d
+        private void OnDebugClearFlow(object sender, RoutedEventArgs e)
+        {
+            result.Clear();
+            finalProcList.Clear();
+
+            clearDiagram();
+        }
+
+
+        private void connect2End(List<Node> nodeList)
+        {
+            myDiagram.StartTransaction("addLink2End");
+            for (int i = 2; i < nodeList.Count; i++)
+            {
+                if ((nodeList[i].LinksOutOf).ToList<Link>().Count == 0)
+                {
+                    myDiagram.Model.AddLink(nodeList[i].Data, null, nodeList[1].Data, null);
+                }
+            }
+
+            myDiagram.CommitTransaction("addLink2End");
+        }
+
+        private void clearDiagram()
+        {
+            
+
+            int nodeN = myDiagram.Nodes.ToList<Node>().Count;
+            int linkN = myDiagram.Links.ToList<Link>().Count;
+
+            myDiagram.StartTransaction("deleteNode");
+
+            for (int i = 2; i < nodeN; i++)
+            {
+                myDiagram.Model.RemoveNode(myDiagram.Nodes.ToList<Node>()[2].Data);
+            }
+
+            myDiagram.CommitTransaction("deleteNode");
+        }
+
+        private MyNodeData reconProcessChainInside(DataProcess currProcess)
+        {
+         
+            
+
+
+
+            //만일 child들이 있을 경우
+            if (currProcess is DataProcessChain)
+            {
+                DataProcessChain dpc = currProcess as DataProcessChain;
+                
+                MyNodeData newParent = prevParent;
+
+
+                bool isParallel = false;
+                bool prevSingleNode = false;
+
+                for (int i = 0; i < dpc.Items.Count; i++)
+                {
+                    //만일 chain일 경우
+
+                    MyNodeData parentNode = currParent;
+                    List<MyNodeData> chainLeafNode = new List<MyNodeData>();
+                    if (dpc.Items[i] is DataProcessChain)
+                    {
+                        
+                        if (prevSingleNode == true)//singleNode가 나온 이후 dpc가 나온 후
+                        {
+                            prevSingleNode = false;
+                            isParallel = true;
+                            MyNodeData myParent = currParent;
+
+                            myParent = reconProcessChainInside(prevProcess, dpc.Items[i], prevParent, myParent);
+
+                            chainLeafNode.Add(myParent);
+
+                            
+
+
+
+                        }
+                    }
+                    else//만일 걍 node일 경우
+                    {
+                        MyNodeData myNode = new MyNodeData()
+                        {
+                            FuncBinding = (DataProcess)currProcess.Clone(),
+                            Name = currProcess.Name,
+                            Color = "Lavender",
+                            inputNum = 1,
+                            outputNum = 1,
+                            Deletable = true
+                        };
+
+                        myDiagram.StartTransaction("Add node");
+                        myDiagram.Model.AddNode(myNode);
+                        myDiagram.CommitTransaction("Add node");
+
+                        if (isParallel == true)//dpc 탐색 다 끝난 후일시 이어붙이자
+                        {
+                            for (int j = 0; j < chainLeafNode.Count; j++)
+                            {
+                                myDiagram.StartTransaction("Add link");
+                                myDiagram.Model.AddLink(chainLeafNode[j], null, myNode, null);
+                                myDiagram.CommitTransaction("Add link");
+                            }
+                            isParallel = false;
+                        }
+                        else if (isParallel == false)
+                        {
+                            myDiagram.StartTransaction("Add link");
+                            myDiagram.Model.AddLink(parentNode, null, myNode, null);
+                            myDiagram.CommitTransaction("Add link");
+                            
+                            parentNode = myNode;
+                            prevSingleNode = true;
+                        }
+                    }
+                    
+                }
+            }
+            else
+            {
+                MyNodeData myNode = new MyNodeData()
+                {
+                    FuncBinding = (DataProcess)currProcess.Clone(),
+                    Name = currProcess.Name,
+                    Color = "Lavender",
+                    inputNum = 1,
+                    outputNum = 1,
+                    Deletable = true
+                };
+
+                myDiagram.StartTransaction("Add node");
+                myDiagram.Model.AddNode(myNode);
+                myDiagram.Model.AddLink(currParent, null, myNode, null);
+                myDiagram.CommitTransaction("Add node");
+
+
+                return myNode;
+
+            }
+
+
+            return null;
+
+            
+
+        }
+
+        private void reconProcessChain2Node(List<DataProcess> result)
+        {
+            MyNodeData parent = start;
+
+            DataProcessChain mainChain = new DataProcessChain();
+
+            reconProcessChainInside(mainChain.Items[0] ,parent);
+
+
+            myDiagram.StartTransaction("Add start link");
+            myDiagram.Model.AddLink(start, null, myDiagram.Nodes.ToList<Node>()[3], null);
+            myDiagram.CommitTransaction("Add start link");
+
+            if(myDiagram.Nodes.ToList<Node>()[1].LinksInto.ToList<Link>().Count == 0)
+                connect2End(myDiagram.Nodes.ToList<Node>());
+
+
+        }
+
+        /*
+         *  int totalNode = adjMatrix.GetLength(0);//without start, end node
+               int numProcess = totalNode-2;//including start, end node
+
+               String res = "";
+
+               bool[] isVisit = new bool[totalNode];
+               List<int> searchList = new List<int>();
+
+               searchList.Add(0);
+
+               int currIdx;
+
+               while (searchList.Count != 0)
+               {
+                   currIdx = searchList[0];
+                   isVisit[currIdx] = true;
+
+                   if (currIdx > 1)
+                       res = res + processList[currIdx-2] + " ";
+
+                   for (int i = 0; i < totalNode; i++)
+                   {
+                       if (adjMatrix[currIdx, i] == 1 && isVisit[i] == false)
+                           searchList.Insert(1, i);
+                   }
+
+                   searchList.RemoveAt(0);
+               }
+         * */
+
+
+
+
     }
 
     [Serializable]
