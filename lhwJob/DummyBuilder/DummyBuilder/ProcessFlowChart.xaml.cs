@@ -34,7 +34,7 @@ namespace SMiningClient.WPF
         public List<DataProcess> allProcList;
         public List<DataProcess> finalProcList;
         public List<DataProcess> result;
-        int[,] adjMatrix;
+        
         public MyNodeData start;
         public MyNodeData end;
         
@@ -426,14 +426,14 @@ namespace SMiningClient.WPF
                
         //재귀호출로 chain 형태로 그래프를 변형하자
         //임시로 chainMultiComponent와 chainComponent라고 하는 클래스를 정의했는데 나중에 dataProcesschain 만드는 함수랑 합칠 수 있을듯 아직 chain만드는게 correct하지 않아서 일단 냅둡시다
-        private int makeChainRecursive(List<DataProcess> processList, int[,] adjMatrix, int currIdx,
+        private int makeChainRecursive(ref bool[] isVisit, List<DataProcess> processList, int[,] adjMatrix, int currIdx,
             int[] totInNode, int[] totOutNode, chainMultiComponent currChainComponent, chainMultiComponent prevChainComponent, ref List<int> nonSearchedIdx, ref List<chainMultiComponent> nonSearchCurrChain, bool isStart)
         {
             //만일 들어오는 node일 경우 그 idx를 리턴, 그 idx부터 다시 탐색을 시작한다
 
                 if (totInNode[currIdx] > 1 && isStart == false)
                 {
-                    if (nonSearchedIdx.Contains(currIdx) == false)
+                    if (nonSearchedIdx.Contains(currIdx) == false && isVisit[currIdx] == false)
                     {
                         nonSearchedIdx.Add(currIdx);
                         nonSearchCurrChain.Add(prevChainComponent);
@@ -444,6 +444,7 @@ namespace SMiningClient.WPF
                 //그냥 단일 node일 경우 || 처음 시작점이 들어오는 노드일시 무시하고 검색 시작하자(이미 이전단계에서 하던거니까)
                 if ((totInNode[currIdx] <= 1 && totOutNode[currIdx] <= 1) || (totOutNode[currIdx] <= 1 && isStart == true))
                 {
+                    isVisit[currIdx] = true;
                     chainComponent myChainComponent = new chainComponent();
                     myChainComponent.idx = currIdx;
                     currChainComponent.multiChain.Add(myChainComponent);
@@ -452,13 +453,15 @@ namespace SMiningClient.WPF
                     {
                         if (adjMatrix[currIdx, i] != 0)
                         {
-                            makeChainRecursive(processList, adjMatrix, i, totInNode, totOutNode, currChainComponent, prevChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
+                            makeChainRecursive(ref isVisit, processList, adjMatrix, i, totInNode, totOutNode, currChainComponent, prevChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
                         }
                     }
                 }
                 //만일 또 다른 나가는 node일 경우, 새롭게 chain을 만들자d
                 if (totOutNode[currIdx] > 1)
                 {
+                    isVisit[currIdx] = true;
+
                     chainComponent myChainComponent = new chainComponent();
                     myChainComponent.idx = currIdx;
                     currChainComponent.multiChain.Add(myChainComponent);
@@ -470,7 +473,7 @@ namespace SMiningClient.WPF
                             chainMultiComponent myChain = new chainMultiComponent();
                             currChainComponent.multiChain.Add(myChain);
 
-                            makeChainRecursive(processList, adjMatrix, i, totInNode, totOutNode, myChain, currChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
+                            makeChainRecursive(ref isVisit, processList, adjMatrix, i, totInNode, totOutNode, myChain, currChainComponent, ref nonSearchedIdx, ref nonSearchCurrChain, false);
                         }
                     }
                 }
@@ -553,21 +556,28 @@ namespace SMiningClient.WPF
 
             List<int> searchList = new List<int>();
             List<chainMultiComponent> searchListCurrChain = new List<chainMultiComponent>();
+            bool[] isVisit = new bool[adjMatrix.GetLength(0)];
 
 
 
-            searchList.Add(0);
-            searchListCurrChain.Add(new chainMultiComponent());
+            
 
             chainMultiComponent mainChain = new chainMultiComponent();
+            chainMultiComponent currChain = null;
+
+            searchList.Add(0);
+            searchListCurrChain.Add(mainChain);
 
             int currIdx;
 
             while (searchList.Count != 0)
             {
                 currIdx = searchList[0];
+                currChain = searchListCurrChain[0];
 
-                makeChainRecursive(processList, adjMatrix, currIdx, totInNode, totOutNode, mainChain, mainChain, ref searchList, ref searchListCurrChain, true);
+                makeChainRecursive(ref isVisit, processList, adjMatrix, currIdx, totInNode, totOutNode, currChain, currChain, ref searchList, ref searchListCurrChain, true);
+                
+
                 searchList.RemoveAt(0);
                 searchListCurrChain.RemoveAt(0);
             }
@@ -638,7 +648,7 @@ namespace SMiningClient.WPF
 
             String res = "";
 
-            adjMatrix = new int[nodeList.Count, nodeList.Count];
+            int[,] adjMatrix = new int[nodeList.Count, nodeList.Count];
             bool[] isVisit = new bool[nodeList.Count];
 
             
@@ -793,12 +803,16 @@ namespace SMiningClient.WPF
         //Layout 버튼 클릭시
         private void OnLayoutButtonClick(object sender, RoutedEventArgs e)
         {
+            layerSorting();
+        } 
+        private void layerSorting()
+        {
             var lay = new Northwoods.GoXam.Layout.LayeredDigraphLayout();
             myDiagram.Layout = lay;
             myDiagram.Layout.DoLayout(myDiagram.Nodes, myDiagram.Links);
 
             myDiagram.Layout = initLayout;
-        } 
+        }
 
         // 확인 버튼 클릭시
         private void OnOkButtonClick(object sender, RoutedEventArgs e)
@@ -810,6 +824,9 @@ namespace SMiningClient.WPF
         private void saveCurrFlow()
         {
             finalProcList.Clear();
+            result.Clear();
+            
+
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
 
@@ -853,6 +870,10 @@ namespace SMiningClient.WPF
             {
                 reconProcessChain2Node(result);
             }
+
+            layerSorting();
+
+
         }
         //Debug clear 버튼 누를 시 모든 flow가 지워진다d
         private void OnDebugClearFlow(object sender, RoutedEventArgs e)
@@ -895,13 +916,97 @@ namespace SMiningClient.WPF
             myDiagram.CommitTransaction("deleteNode");
         }
 
-        private MyNodeData reconProcessChainInside(DataProcess currProcess)
+        private MyNodeData reconProcessChainInside(DataProcess currProcess,ref MyNodeData parentNode,ref List<MyNodeData> parentList, bool isParentListFinish, int currParentNum)
         {
-         
+            if (currProcess is DataProcessChain)
+            {
+                DataProcessChain dpc = currProcess as DataProcessChain;
+                MyNodeData finalNode = new MyNodeData();
+                MyNodeData prevParent = parentNode.Clone() as MyNodeData;
+                bool isReadyForChain = false;
+                bool isChainSearch = false;
+                bool isUpdateParentList = false;
+
+                int count=0;
+
+                for (int i = 0; i < dpc.Items.Count; i++)
+                {
+                    
+                    
+                    if (dpc.Items[i] is DataProcessChain)
+                    {
+                        if(isReadyForChain == true)
+                        {
+                            isChainSearch = true;
+                            isReadyForChain = false;
+                            isUpdateParentList = false;
+                        }
+                        count++;
+                    }
+                    else
+                    {
+                        
+                        if(isChainSearch == true)
+                        {
+                            isUpdateParentList = true;
+                            isChainSearch = false;
+                        }
+                        else
+                            count = 0;
+
+                        isReadyForChain = true;
+                    }
+                    finalNode = reconProcessChainInside(dpc.Items[i],ref parentNode,ref parentList,isUpdateParentList,count );
+                }
+
+                parentList.Add(finalNode);
+                parentNode = prevParent;//다시 parent 바꿔주기
+
+                return finalNode;
+
+            }
+            else
+            {
+                MyNodeData myNode = new MyNodeData()
+                {
+                    FuncBinding = (DataProcess)currProcess.Clone(),
+                    Name = currProcess.Name,
+                    Color = "Lavender",
+                    inputNum = 1,
+                    outputNum = 1,
+                    Deletable = true
+                };
+
+                myDiagram.StartTransaction("Add node");
+                myDiagram.Model.AddNode(myNode);
+                myDiagram.CommitTransaction("Add node");
+
+                
+
+                if (isParentListFinish == true)
+                {
+                    myDiagram.StartTransaction("Add link");
+                    for (int i = 0; i < currParentNum; i++)
+                    {
+                        myDiagram.Model.AddLink(parentList[parentList.Count-1], null, myNode, null);
+                        parentList.RemoveAt(parentList.Count - 1);
+                    }
+                    myDiagram.CommitTransaction("Add link");
+                }
+                else
+                {
+                    myDiagram.StartTransaction("Add link");
+                    myDiagram.Model.AddLink(parentNode, null, myNode, null);
+                    myDiagram.CommitTransaction("Add link");
+                }
+
+                parentNode = myNode;
+
+                return myNode;
+            }
+
             
-
-
-
+            /*
             //만일 child들이 있을 경우
             if (currProcess is DataProcessChain)
             {
@@ -1001,7 +1106,7 @@ namespace SMiningClient.WPF
 
 
             return null;
-
+            */
             
 
         }
@@ -1011,17 +1116,18 @@ namespace SMiningClient.WPF
             MyNodeData parent = start;
 
             DataProcessChain mainChain = new DataProcessChain();
+            List<MyNodeData> parentList = new List<MyNodeData>();
+            MyNodeData firstParent = start.Clone() as MyNodeData;
 
-            reconProcessChainInside(mainChain.Items[0] ,parent);
+            for (int i = 0; i < result.Count; i++)
+                mainChain.addProcess(result[i]);
 
+            reconProcessChainInside(mainChain,ref firstParent,ref parentList, false,0);
 
-            myDiagram.StartTransaction("Add start link");
-            myDiagram.Model.AddLink(start, null, myDiagram.Nodes.ToList<Node>()[3], null);
-            myDiagram.CommitTransaction("Add start link");
-
+            
             if(myDiagram.Nodes.ToList<Node>()[1].LinksInto.ToList<Link>().Count == 0)
                 connect2End(myDiagram.Nodes.ToList<Node>());
-
+            
 
         }
 
