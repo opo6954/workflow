@@ -176,17 +176,18 @@ namespace SMiningClient.WPF
 
             MyNodeData node = Part.FindAncestor<Node>(sender as UIElement).Data as MyNodeData;
             
-            Node n = Part.FindAncestor<Node>(sender as UIElement);
-
-            if (node._dataProcess != null)
+            if (node != null)
             {
-                string head = "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8'></head>" +
-                            "<style type='text/css'> * { font-family: 맑은 고딕; font-size: 10pt; }; H2 { font-size: 14pt; }; </style><body>";
-                processDescription.NavigateToString(head + node._dataProcess.Description + "</body></html>");
-            }
-            if (node._dataProcess != null)
-            {
-                OnParameterInput(node);
+                if (node._dataProcess != null)
+                {
+                    string head = "<html><head><meta http-equiv='Content-Type' content='text/html;charset=UTF-8'></head>" +
+                                "<style type='text/css'> * { font-family: 맑은 고딕; font-size: 10pt; }; H2 { font-size: 14pt; }; </style><body>";
+                    processDescription.NavigateToString(head + node._dataProcess.Description + "</body></html>");
+                }
+                if (node._dataProcess != null)
+                {
+                    OnParameterInput(node);
+                }
             }
         }
 
@@ -804,24 +805,44 @@ namespace SMiningClient.WPF
         private void OnLayoutButtonClick(object sender, RoutedEventArgs e)
         {
             layerSorting();
+
+            
+
         } 
         private void layerSorting()
         {
-            var lay = new Northwoods.GoXam.Layout.LayeredDigraphLayout();
-            myDiagram.Layout = lay;
-            myDiagram.Layout.DoLayout(myDiagram.Nodes, myDiagram.Links);
 
+
+            
+            
+            LayeredDigraphLayout l = new Northwoods.GoXam.Layout.LayeredDigraphLayout();
+            l.LayerSpacing = 1;
+            //l.LayerSpacing = 500;
+
+
+            myDiagram.StartTransaction("sorting layout");
+            myDiagram.Layout = l;
+            myDiagram.Layout.DoLayout(myDiagram.Nodes, myDiagram.Links);
             myDiagram.Layout = initLayout;
+            myDiagram.CommitTransaction("sorting layout");
+
+
+
+            
+            
         }
+
+     
 
         // 확인 버튼 클릭시
         private void OnOkButtonClick(object sender, RoutedEventArgs e)
         {
-            saveCurrFlow();
+            saveCurrFlow(true);
+            
         }
         //Debug Save 버튼 누를시 현재의 flow를 저장한다.
 
-        private void saveCurrFlow()
+        private void saveCurrFlow(bool isClose)
         {
             finalProcList.Clear();
             result.Clear();
@@ -830,29 +851,32 @@ namespace SMiningClient.WPF
             List<Node> nodeList = myDiagram.Nodes.ToList<Node>();
             Node currNode = nodeList[0];
 
-            //node 불러와서 표시하는 것만 하면 됩니다
-
-
+            
 
             if ((nodeList[0].LinksOutOf).ToList<Link>().Count == 0)
             {
                 MessageBox.Show("시작점이 연결되지 않았습니다.");
                 return;
             }
-            else if ((nodeList[1].LinksInto).ToList<Link>().Count == 0)
+            if (nodeList.Count <= 2 )
             {
-                connect2End(nodeList);
+                MessageBox.Show("Process가 없습니다.");
+                return;
             }
+            
+            connect2End(nodeList);
+            
 
             if (buildProcessTree(nodeList))
             {
                 //DEBUG
-                //Close();
+                if(isClose == true)
+                    Close();
             }
         }
         private void OnDebugSaveFlow(object sender, RoutedEventArgs e)
         {
-            saveCurrFlow();
+            saveCurrFlow(false);
             if (result.Count > 0)
                 MessageBox.Show("최근 flow가 저장되었습니다.");
         }
@@ -878,8 +902,10 @@ namespace SMiningClient.WPF
         //Debug clear 버튼 누를 시 모든 flow가 지워진다d
         private void OnDebugClearFlow(object sender, RoutedEventArgs e)
         {
+            /*
             result.Clear();
             finalProcList.Clear();
+            */
 
             clearDiagram();
         }
@@ -892,7 +918,7 @@ namespace SMiningClient.WPF
             {
                 if ((nodeList[i].LinksOutOf).ToList<Link>().Count == 0)
                 {
-                    myDiagram.Model.AddLink(nodeList[i].Data, null, nodeList[1].Data, null);
+                    myDiagram.Model.AddLink(nodeList[i].Data, "out1", nodeList[1].Data, "in1");//일단은 outputport, inport를 1개로 고정하자
                 }
             }
 
@@ -916,7 +942,7 @@ namespace SMiningClient.WPF
             myDiagram.CommitTransaction("deleteNode");
         }
 
-        private MyNodeData reconProcessChainInside(DataProcess currProcess,ref MyNodeData parentNode,ref List<MyNodeData> parentList, bool isParentListFinish, int currParentNum)
+        private MyNodeData reconProcessChainInside(DataProcess currProcess,ref MyNodeData parentNode,ref List<MyNodeData> parentList, bool isParentListFinish, int currParentNum, int idx)
         {
             if (currProcess is DataProcessChain)
             {
@@ -956,7 +982,7 @@ namespace SMiningClient.WPF
 
                         isReadyForChain = true;
                     }
-                    finalNode = reconProcessChainInside(dpc.Items[i],ref parentNode,ref parentList,isUpdateParentList,count );
+                    finalNode = reconProcessChainInside(dpc.Items[i],ref parentNode,ref parentList,isUpdateParentList,count,idx++);
                 }
 
                 parentList.Add(finalNode);
@@ -967,6 +993,23 @@ namespace SMiningClient.WPF
             }
             else
             {
+                /*
+                 *  var nodeData = new MyNodeData()
+                        {
+                            Key = idx.ToString(),
+                            FuncBinding = (DataProcess)dataProcess.Clone(),
+                            Name = dataProcess.Name,
+                            ParentName = currParent.Header as String,
+                            Color = "Lavender",
+                            inputNum = 1,
+                            outputNum = 1,
+                            Deletable = true
+                        };
+
+                        // 개별 색상
+                        int colorDiff = (int)(((float)idx / allProcList.Count) * 60);
+                        nodeData.BodyColor2 = System.Windows.Media.Color.FromRgb((byte) (180 + colorDiff), (byte) 200, (byte)(220 - colorDiff));
+                */
                 MyNodeData myNode = new MyNodeData()
                 {
                     FuncBinding = (DataProcess)currProcess.Clone(),
@@ -976,6 +1019,14 @@ namespace SMiningClient.WPF
                     outputNum = 1,
                     Deletable = true
                 };
+                
+                
+                myNode.ParentName = findParentofDataProcess(currProcess, 0);
+
+
+                int colorDiff = (int)(((float)idx / allProcList.Count) * 60);
+                myNode.BodyColor2 = System.Windows.Media.Color.FromRgb((byte)(180 + colorDiff), (byte)200, (byte)(220 - colorDiff));
+
 
                 myDiagram.StartTransaction("Add node");
                 myDiagram.Model.AddNode(myNode);
@@ -988,7 +1039,7 @@ namespace SMiningClient.WPF
                     myDiagram.StartTransaction("Add link");
                     for (int i = 0; i < currParentNum; i++)
                     {
-                        myDiagram.Model.AddLink(parentList[parentList.Count-1], null, myNode, null);
+                        myDiagram.Model.AddLink(parentList[parentList.Count-1], "out1", myNode, "in1");
                         parentList.RemoveAt(parentList.Count - 1);
                     }
                     myDiagram.CommitTransaction("Add link");
@@ -996,7 +1047,7 @@ namespace SMiningClient.WPF
                 else
                 {
                     myDiagram.StartTransaction("Add link");
-                    myDiagram.Model.AddLink(parentNode, null, myNode, null);
+                    myDiagram.Model.AddLink(parentNode, "out1", myNode, "in1");
                     myDiagram.CommitTransaction("Add link");
                 }
 
@@ -1111,6 +1162,27 @@ namespace SMiningClient.WPF
 
         }
 
+
+        private String findParentofDataProcess(DataProcess dp, int flags)
+        {
+            String[] divided = dp.Name.Split('.');
+            String res = "";
+            int length;
+
+            if (flags == 0)
+                length = divided.Count() - 1;
+            else
+                length = flags;
+            for (int i = 0; i < length; i++)
+            {
+                res = res + divided[i];
+                if (i < flags - 1)
+                    res = res + ".";
+            }
+
+            return res;
+        }
+
         private void reconProcessChain2Node(List<DataProcess> result)
         {
             MyNodeData parent = start;
@@ -1122,10 +1194,10 @@ namespace SMiningClient.WPF
             for (int i = 0; i < result.Count; i++)
                 mainChain.addProcess(result[i]);
 
-            reconProcessChainInside(mainChain,ref firstParent,ref parentList, false,0);
+            reconProcessChainInside(mainChain,ref firstParent,ref parentList, false,0,0);
 
             
-            if(myDiagram.Nodes.ToList<Node>()[1].LinksInto.ToList<Link>().Count == 0)
+            //if(myDiagram.Nodes.ToList<Node>()[1].LinksInto.ToList<Link>().Count == 0)
                 connect2End(myDiagram.Nodes.ToList<Node>());
             
 

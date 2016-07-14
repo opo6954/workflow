@@ -164,7 +164,9 @@
     <Grid Background="{DynamicResource WindowBackgroundBrush}" Name="ProcessCandidate">
         <TreeView Name="treeView" AllowDrop="True" PreviewMouseLeftButtonDown="treeView_PreviewMouseLeftButtonDown_1" Margin="10,10,739,418" Width="265" HorizontalAlignment="Left">
         </TreeView>
+        
         <go:Diagram x:Name="myDiagram"
+                    Stretch="Uniform"
                     AllowDrop="True"
                     Drop="myDiagram_Drop_1"
                 Padding="10" BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1"
@@ -184,6 +186,7 @@
             </go:Diagram.RenderTransform>
             
         </go:Diagram>
+        
         <Grid HorizontalAlignment="Left" Margin="10,325,0,10" Width="267" VerticalAlignment="Bottom">
             <Border BorderBrush="{DynamicResource NormalBorderBrush}" BorderThickness="1">
                 <WebBrowser x:Name="processDescription" Height="400"/>
